@@ -1,0 +1,162 @@
+{
+  "info": {
+    "name": "Dr.20 Staff Phase 1",
+    "description": "Staff login → dashboard → verify token → start → complete.\n\nSet environment variables:\n- baseUrl: http://localhost:8081 OR https://your-staging-url.onrender.com\n- staffToken: auto-set after Verify OTP (or paste manually)\n- appointmentId: auto-set from verify-token response (or paste manually)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8081" },
+    { "key": "staffToken", "value": "" },
+    { "key": "appointmentId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "1. Staff Send OTP",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"phone\": \"9123456781\"\n}"
+        },
+        "url": "{{baseUrl}}/api/staff/auth/send-otp"
+      }
+    },
+    {
+      "name": "2. Staff Verify OTP",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "if (pm.response.code === 200) {",
+              "  var json = pm.response.json();",
+              "  if (json.token) {",
+              "    pm.collectionVariables.set('staffToken', json.token);",
+              "    console.log('staffToken saved');",
+              "  }",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"phone\": \"9123456781\",\n  \"otp\": \"PASTE_OTP_FROM_LOGS\"\n}"
+        },
+        "url": "{{baseUrl}}/api/staff/auth/verify-otp"
+      }
+    },
+    {
+      "name": "3. Staff Dashboard",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{staffToken}}" }
+        ],
+        "url": "{{baseUrl}}/api/staff/dashboard"
+      }
+    },
+    {
+      "name": "4. Upcoming Appointments",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{staffToken}}" }
+        ],
+        "url": "{{baseUrl}}/api/staff/appointments/upcoming"
+      }
+    },
+    {
+      "name": "5. Verify Token (7842)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "if (pm.response.code === 200) {",
+              "  var json = pm.response.json();",
+              "  if (json.id) {",
+              "    pm.collectionVariables.set('appointmentId', json.id);",
+              "    console.log('appointmentId saved: ' + json.id);",
+              "  }",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{staffToken}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"tokenNumber\": \"7842\"\n}"
+        },
+        "url": "{{baseUrl}}/api/staff/appointments/verify-token"
+      }
+    },
+    {
+      "name": "6. Verify QR (alternative)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{staffToken}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"qrData\": \"DR20-SEED001\"\n}"
+        },
+        "url": "{{baseUrl}}/api/staff/appointments/verify-qr"
+      }
+    },
+    {
+      "name": "7. Start Consultation",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{staffToken}}" }
+        ],
+        "url": "{{baseUrl}}/api/staff/appointments/{{appointmentId}}/start"
+      }
+    },
+    {
+      "name": "8. Complete Appointment",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{staffToken}}" }
+        ],
+        "url": "{{baseUrl}}/api/staff/appointments/{{appointmentId}}/complete"
+      }
+    },
+    {
+      "name": "9. Dashboard (after complete)",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{staffToken}}" }
+        ],
+        "url": "{{baseUrl}}/api/staff/dashboard"
+      }
+    },
+    {
+      "name": "10. Staff Profile",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{staffToken}}" }
+        ],
+        "url": "{{baseUrl}}/api/staff/profile"
+      }
+    }
+  ]
+}
