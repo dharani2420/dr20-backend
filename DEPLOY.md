@@ -45,18 +45,23 @@ Save as `JWT_SECRET` in the hosting dashboard only.
 
 ---
 
-## Step 3 — Deploy on Render
+## Step 3 — Deploy on Render (Docker — recommended)
 
-1. Push code to GitHub.
-2. Render → **New** → **Web Service** → connect repo.
-3. Settings:
+Render often defaults to Node.js and fails with `mvn: command not found`. Use **Docker** instead.
+
+1. Push code to GitHub (includes `Dockerfile` at project root next to `pom.xml`).
+2. Render → your service → **Settings**.
+3. Configure:
 
 | Field | Value |
 |-------|--------|
-| Root Directory | `doctor-patient-api/doctor-patient-api` (adjust if repo root is the project) |
-| Runtime | **Docker** or **Native** — if Native/Java: |
-| Build Command | `mvn clean package -DskipTests` |
-| Start Command | `java -jar target/doctor-patient-0.0.1-SNAPSHOT.jar` |
+| **Runtime** | **Docker** |
+| **Root Directory** | Folder containing `Dockerfile` and `pom.xml` (blank if repo root **is** the Spring Boot project) |
+| **Dockerfile Path** | `Dockerfile` (default) |
+| **Build Command** | **Leave empty** |
+| **Start Command** | **Leave empty** |
+
+Build and start are defined in `Dockerfile` — do not use `mvn` in Render build command when Runtime is Docker.
 
 4. **Environment** variables:
 
@@ -65,13 +70,37 @@ Save as `JWT_SECRET` in the hosting dashboard only.
 | `SPRING_PROFILES_ACTIVE` | `staging` |
 | `SPRING_DATA_MONGODB_URI` | your Atlas URI |
 | `JWT_SECRET` | your generated secret |
-| `JAVA_VERSION` | `17` (if Render asks) |
 
 Render sets `PORT` automatically — the app uses `server.port=${PORT:8081}`.
 
-5. Deploy. Copy your service URL, e.g. `https://dr20-api.onrender.com`.
+5. **Manual Deploy** → **Clear build cache & deploy**.
+6. Check **Logs** — you should see Maven/Java build steps, **not** `Using Node.js`.
+7. Copy your service URL, e.g. `https://dr20-backend.onrender.com`.
 
 **First request** on free tier may take 30–60s (cold start).
+
+### Render Docker checklist
+
+- [ ] `Dockerfile` pushed to GitHub (same folder as `pom.xml`)
+- [ ] Runtime = **Docker**
+- [ ] Root Directory points to that folder
+- [ ] Build/Start commands empty
+- [ ] 3 env vars set
+- [ ] Logs show `Started Dr20Application`
+
+---
+
+## Step 3 (alternative) — Render Native Java
+
+Only if Docker is not used and Render detects `pom.xml` at service root:
+
+| Field | Value |
+|-------|--------|
+| Root Directory | folder with `pom.xml` |
+| Build Command | `mvn clean package -DskipTests` |
+| Start Command | `java -jar target/doctor-patient-0.0.1-SNAPSHOT.jar` |
+
+If logs show `Using Node.js`, switch to **Docker** above.
 
 ---
 
