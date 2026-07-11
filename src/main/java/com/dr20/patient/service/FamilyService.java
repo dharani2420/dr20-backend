@@ -27,6 +27,17 @@ public class FamilyService {
         return familyMemberRepository.save(member);
     }
 
+    public FamilyMember update(String memberId, FamilyMember updated) {
+        FamilyMember member = familyMemberRepository.findById(memberId)
+                .orElseThrow(() -> new ResourceNotFoundException("Family member not found"));
+        if (updated.getName() != null) member.setName(updated.getName());
+        if (updated.getRelation() != null) member.setRelation(updated.getRelation());
+        if (updated.getAge() != null) member.setAge(updated.getAge());
+        if (updated.getGender() != null) member.setGender(updated.getGender());
+        if (updated.getBloodGroup() != null) member.setBloodGroup(updated.getBloodGroup());
+        return familyMemberRepository.save(member);
+    }
+
     public void remove(String memberId) {
         if (!familyMemberRepository.existsById(memberId)) {
             throw new ResourceNotFoundException("Family member not found");

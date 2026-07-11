@@ -5,6 +5,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import com.dr20.shared.model.Payment;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -34,5 +36,10 @@ public class PaymentController {
     @PostMapping("/webhook")
     public ResponseEntity<Map<String, Object>> webhook(@RequestBody Map<String, String> body) {
         return ResponseEntity.ok(paymentService.webhook(body));
+    }
+
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<List<Payment>> history(@PathVariable String userId) {
+        return ResponseEntity.ok(paymentService.getHistory(userId));
     }
 }

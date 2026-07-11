@@ -50,8 +50,31 @@ public class AuthService {
         res.put("message", "OTP verified");
         res.put("token", token);
         res.put("userId", user.getId());
-        res.put("isProfileComplete", user.getFirstName() != null);
+        res.put("isProfileComplete", isProfileComplete(user));
         return res;
+    }
+
+    private boolean isProfileComplete(User user) {
+        return user.getFirstName() != null && !user.getFirstName().isBlank()
+                && user.getLastName() != null && !user.getLastName().isBlank()
+                && user.getEmail() != null && !user.getEmail().isBlank()
+                && user.getDateOfBirth() != null && !user.getDateOfBirth().isBlank()
+                && user.getGender() != null && !user.getGender().isBlank()
+                && user.getBloodGroup() != null && !user.getBloodGroup().isBlank();
+    }
+
+    public Map<String, Object> getProfileSummary(String userId) {
+        User user = getProfile(userId);
+        Map<String, Object> summary = new HashMap<>();
+        summary.put("user", user);
+        summary.put("phone", user.getPhone());
+        summary.put("displayName", buildDisplayName(user));
+        return summary;
+    }
+
+    private String buildDisplayName(User user) {
+        if (user.getFirstName() == null) return "";
+        return (user.getFirstName() + (user.getLastName() != null ? " " + user.getLastName() : "")).trim();
     }
 
     public Map<String, Object> completeProfile(String userId, User profile) {
@@ -63,6 +86,7 @@ public class AuthService {
         user.setDateOfBirth(profile.getDateOfBirth());
         user.setGender(profile.getGender());
         user.setBloodGroup(profile.getBloodGroup());
+        user.setAddress(profile.getAddress());
         userRepository.save(user);
 
         Map<String, Object> res = new HashMap<>();
@@ -85,6 +109,8 @@ public class AuthService {
         user.setDateOfBirth(updated.getDateOfBirth());
         user.setGender(updated.getGender());
         user.setBloodGroup(updated.getBloodGroup());
+        user.setAddress(updated.getAddress());
+        user.setProfileImage(updated.getProfileImage());
         return userRepository.save(user);
     }
 }

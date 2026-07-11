@@ -87,6 +87,19 @@ public class StaffAuthService {
         return res;
     }
 
+    public Map<String, Object> resendOtp(String phone) {
+        User user = userRepository.findByPhone(phone)
+                .orElseThrow(() -> new BadRequestException("Register first or contact admin"));
+        if (!user.getRole().isStaff()) {
+            throw new BadRequestException("Not a staff account");
+        }
+        otpService.sendOtp(phone, true);
+        Map<String, Object> res = new HashMap<>();
+        res.put("success", true);
+        res.put("message", "OTP resent");
+        return res;
+    }
+
     public Map<String, Object> verifyOtp(String phone, String otp) {
         User user = otpService.verifyOtp(phone, otp);
         if (!user.getRole().isStaff()) {
@@ -116,6 +129,11 @@ public class StaffAuthService {
         user.setFirstName(updated.getFirstName());
         user.setLastName(updated.getLastName());
         user.setEmail(updated.getEmail());
+        user.setDateOfBirth(updated.getDateOfBirth());
+        user.setGender(updated.getGender());
+        user.setAddress(updated.getAddress());
+        user.setLanguages(updated.getLanguages());
+        user.setRegistrationNumber(updated.getRegistrationNumber());
         user.setProfileImage(updated.getProfileImage());
         return userRepository.save(user);
     }

@@ -1,0 +1,338 @@
+{
+  "info": {
+    "name": "Dr.20 Patient App (E2E)",
+    "description": "Full patient flow from Figma screenshots.\n\nFlow: OTP Login → Profile → Home → Services → Doctors → Book → Pay → Pass → Appointments → Profile/Family\n\nVariables: baseUrl, patientPhone, patientToken, userId, doctorId, appointmentId, orderId, paymentId, appointmentDate, familyMemberId\n\nOTP: check Render Logs (staging). Auth tab = No Auth; one Authorization header on protected calls.\n\nSeed patient (fresh DB): phone 9876543210 — skip signup, use login OTP only.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "https://dr20-backend.onrender.com" },
+    { "key": "newPatientPhone", "value": "9444444444" },
+    { "key": "patientPhone", "value": "9876543210" },
+    { "key": "patientToken", "value": "" },
+    { "key": "userId", "value": "" },
+    { "key": "doctorId", "value": "" },
+    { "key": "appointmentId", "value": "" },
+    { "key": "orderId", "value": "" },
+    { "key": "paymentId", "value": "" },
+    { "key": "appointmentDate", "value": "" },
+    { "key": "appointmentTime", "value": "09:30 AM" },
+    { "key": "familyMemberId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "1. Send OTP (Login)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"phone\": \"{{patientPhone}}\"\n}" },
+        "url": "{{baseUrl}}/api/auth/send-otp"
+      }
+    },
+    {
+      "name": "1b. Send OTP (New Signup)",
+      "event": [{
+        "listen": "test",
+        "script": {
+          "exec": [
+            "if (pm.response.code === 200) {",
+            "  pm.collectionVariables.set('patientPhone', pm.collectionVariables.get('newPatientPhone'));",
+            "}"
+          ],
+          "type": "text/javascript"
+        }
+      }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"phone\": \"{{newPatientPhone}}\"\n}" },
+        "url": "{{baseUrl}}/api/auth/send-otp"
+      }
+    },
+    {
+      "name": "1c. Resend OTP",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"phone\": \"{{patientPhone}}\"\n}" },
+        "url": "{{baseUrl}}/api/auth/resend-otp"
+      }
+    },
+    {
+      "name": "2. Verify OTP",
+      "event": [{
+        "listen": "test",
+        "script": {
+          "exec": [
+            "if (pm.response.code === 200) {",
+            "  var json = pm.response.json();",
+            "  if (json.token) pm.collectionVariables.set('patientToken', json.token);",
+            "  if (json.userId) pm.collectionVariables.set('userId', json.userId);",
+            "}"
+          ],
+          "type": "text/javascript"
+        }
+      }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"phone\": \"{{patientPhone}}\",\n  \"otp\": \"PASTE_OTP_FROM_LOGS\"\n}" },
+        "url": "{{baseUrl}}/api/auth/verify-otp"
+      }
+    },
+    {
+      "name": "3. Complete Profile (Create Profile)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{patientToken}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"firstName\": \"pravin\",\n  \"lastName\": \"av\",\n  \"email\": \"pravin@dr20.com\",\n  \"dateOfBirth\": \"1998-01-15\",\n  \"gender\": \"Male\",\n  \"bloodGroup\": \"O+\"\n}"
+        },
+        "url": "{{baseUrl}}/api/auth/complete-profile"
+      }
+    },
+    {
+      "name": "4. Home Screen",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{patientToken}}" }],
+        "url": "{{baseUrl}}/api/home/{{userId}}"
+      }
+    },
+    {
+      "name": "5. Services Screen",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{patientToken}}" }],
+        "url": "{{baseUrl}}/api/services"
+      }
+    },
+    {
+      "name": "6. Search",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{patientToken}}" }],
+        "url": "{{baseUrl}}/api/search?q=Priya"
+      }
+    },
+    {
+      "name": "7. Specializations",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{patientToken}}" }],
+        "url": "{{baseUrl}}/api/specializations"
+      }
+    },
+    {
+      "name": "8. List Doctors — Consult at ₹20",
+      "event": [{
+        "listen": "test",
+        "script": {
+          "exec": [
+            "if (pm.response.code === 200) {",
+            "  var doctors = pm.response.json();",
+            "  if (Array.isArray(doctors) && doctors.length > 0) {",
+            "    pm.collectionVariables.set('doctorId', doctors[0].id);",
+            "    var d = new Date(); d.setDate(d.getDate()+1);",
+            "    pm.collectionVariables.set('appointmentDate', d.toISOString().slice(0,10));",
+            "  }",
+            "}"
+          ],
+          "type": "text/javascript"
+        }
+      }],
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{patientToken}}" }],
+        "url": "{{baseUrl}}/api/doctors?maxFee=20&clinicType=DR20_CLINIC&availableToday=true"
+      }
+    },
+    {
+      "name": "8b. List Doctors — Private Clinics",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{patientToken}}" }],
+        "url": "{{baseUrl}}/api/doctors?clinicType=PRIVATE_CLINIC&sort=topRated"
+      }
+    },
+    {
+      "name": "8c. List Doctors — Nearest",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{patientToken}}" }],
+        "url": "{{baseUrl}}/api/doctors?sort=nearest&latitude=12.9249&longitude=80.1000"
+      }
+    },
+    {
+      "name": "9. Doctor Profile",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{patientToken}}" }],
+        "url": "{{baseUrl}}/api/doctors/{{doctorId}}/detail"
+      }
+    },
+    {
+      "name": "10. Doctor Slots",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{patientToken}}" }],
+        "url": "{{baseUrl}}/api/doctors/{{doctorId}}/slots?date={{appointmentDate}}"
+      }
+    },
+    {
+      "name": "11. Book Appointment",
+      "event": [{
+        "listen": "test",
+        "script": {
+          "exec": [
+            "if (pm.response.code === 200) {",
+            "  var json = pm.response.json();",
+            "  if (json.id) pm.collectionVariables.set('appointmentId', json.id);",
+            "}"
+          ],
+          "type": "text/javascript"
+        }
+      }],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{patientToken}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"doctorId\": \"{{doctorId}}\",\n  \"appointmentDate\": \"{{appointmentDate}}\",\n  \"appointmentTime\": \"{{appointmentTime}}\",\n  \"consultationType\": \"In-Person\",\n  \"patientName\": \"pravin av\",\n  \"patientAge\": \"26\",\n  \"patientGender\": \"Male\",\n  \"patientBloodGroup\": \"O+\",\n  \"symptoms\": \"General Consultation\"\n}"
+        },
+        "url": "{{baseUrl}}/api/appointments"
+      }
+    },
+    {
+      "name": "12. Booking Confirmation (Bill Summary)",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{patientToken}}" }],
+        "url": "{{baseUrl}}/api/payments/summary/{{appointmentId}}"
+      }
+    },
+    {
+      "name": "13. Create Payment Order (mock)",
+      "event": [{
+        "listen": "test",
+        "script": {
+          "exec": [
+            "if (pm.response.code === 200) {",
+            "  var json = pm.response.json();",
+            "  if (json.orderId) pm.collectionVariables.set('orderId', json.orderId);",
+            "  if (json.paymentId) pm.collectionVariables.set('paymentId', json.paymentId);",
+            "}"
+          ],
+          "type": "text/javascript"
+        }
+      }],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{patientToken}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": { "mode": "raw", "raw": "{\n  \"appointmentId\": \"{{appointmentId}}\",\n  \"userId\": \"{{userId}}\"\n}" },
+        "url": "{{baseUrl}}/api/payments/create-order"
+      }
+    },
+    {
+      "name": "14. Verify Payment (mock)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{patientToken}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": { "mode": "raw", "raw": "{\n  \"orderId\": \"{{orderId}}\",\n  \"paymentId\": \"{{paymentId}}\",\n  \"signature\": \"mock-signature\"\n}" },
+        "url": "{{baseUrl}}/api/payments/verify"
+      }
+    },
+    {
+      "name": "15. Appointment Pass",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{patientToken}}" }],
+        "url": "{{baseUrl}}/api/appointments/{{appointmentId}}/pass"
+      }
+    },
+    {
+      "name": "16. Appointments — All",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{patientToken}}" }],
+        "url": "{{baseUrl}}/api/appointments/user/{{userId}}"
+      }
+    },
+    {
+      "name": "17. Appointments — Upcoming",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{patientToken}}" }],
+        "url": "{{baseUrl}}/api/appointments/user/{{userId}}/upcoming"
+      }
+    },
+    {
+      "name": "18. Appointments — Completed",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{patientToken}}" }],
+        "url": "{{baseUrl}}/api/appointments/user/{{userId}}/completed"
+      }
+    },
+    {
+      "name": "19. Appointments — Cancelled",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{patientToken}}" }],
+        "url": "{{baseUrl}}/api/appointments/user/{{userId}}/cancelled"
+      }
+    },
+    {
+      "name": "20. Get Profile",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{patientToken}}" }],
+        "url": "{{baseUrl}}/api/auth/profile/{{userId}}"
+      }
+    },
+    {
+      "name": "21. List Family Members",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{patientToken}}" }],
+        "url": "{{baseUrl}}/api/family/{{userId}}"
+      }
+    },
+    {
+      "name": "22. Add Family Member",
+      "event": [{
+        "listen": "test",
+        "script": {
+          "exec": [
+            "if (pm.response.code === 200) {",
+            "  var json = pm.response.json();",
+            "  if (json.id) pm.collectionVariables.set('familyMemberId', json.id);",
+            "}"
+          ],
+          "type": "text/javascript"
+        }
+      }],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{patientToken}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": { "mode": "raw", "raw": "{\n  \"name\": \"Sister\",\n  \"relation\": \"Sister\",\n  \"age\": \"22\",\n  \"gender\": \"Female\",\n  \"bloodGroup\": \"A+\"\n}" },
+        "url": "{{baseUrl}}/api/family/{{userId}}"
+      }
+    }
+  ]
+}

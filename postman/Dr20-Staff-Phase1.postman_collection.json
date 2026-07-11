@@ -1,15 +1,32 @@
 {
   "info": {
-    "name": "Dr.20 Staff Phase 1",
-    "description": "Staff login → dashboard → verify token → start → complete.\n\nSet environment variables:\n- baseUrl: http://localhost:8081 OR https://your-staging-url.onrender.com\n- staffToken: auto-set after Verify OTP (or paste manually)\n- appointmentId: auto-set from verify-token response (or paste manually)",
+    "name": "Dr.20 Staff App (Figma)",
+    "description": "Staff app — Figma batch 1 flow only.\n\nCovers: auth, dashboard, bookings, verify, start/complete, arrive, schedule, working hours, mark unavailable, verification, earnings, documents, profile.\n\nRemoved from batch 1: Admin Create Staff (0b), Cancelled tab (4c) — not in Figma screenshots.\n\nVariables: baseUrl, staffPhone, staffToken, appointmentId, scheduleFrom, scheduleTo\n\nOTP: Render Logs. Auth tab = No Auth; one Authorization header on protected requests.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    { "key": "baseUrl", "value": "http://localhost:8081" },
+    { "key": "baseUrl", "value": "https://dr20-backend.onrender.com" },
+    { "key": "staffPhone", "value": "9123456781" },
+    { "key": "newStaffPhone", "value": "9222222222" },
+    { "key": "adminStaffPhone", "value": "9111111111" },
     { "key": "staffToken", "value": "" },
-    { "key": "appointmentId", "value": "" }
+    { "key": "appointmentId", "value": "" },
+    { "key": "scheduleFrom", "value": "2026-07-10" },
+    { "key": "scheduleTo", "value": "2026-07-17" }
   ],
   "item": [
+    {
+      "name": "0a. Staff Self Register",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"phone\": \"{{newStaffPhone}}\",\n  \"profession\": \"DOCTOR\",\n  \"firstName\": \"Anita\",\n  \"lastName\": \"Sharma\",\n  \"email\": \"anita@dr20.com\"\n}"
+        },
+        "url": "{{baseUrl}}/api/staff/auth/register"
+      }
+    },
     {
       "name": "1. Staff Send OTP",
       "request": {
@@ -17,9 +34,18 @@
         "header": [{ "key": "Content-Type", "value": "application/json" }],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"phone\": \"9123456781\"\n}"
+          "raw": "{\n  \"phone\": \"{{staffPhone}}\"\n}"
         },
         "url": "{{baseUrl}}/api/staff/auth/send-otp"
+      }
+    },
+    {
+      "name": "1b. Staff Resend OTP",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"phone\": \"{{staffPhone}}\"\n}" },
+        "url": "{{baseUrl}}/api/staff/auth/resend-otp"
       }
     },
     {
@@ -46,7 +72,7 @@
         "header": [{ "key": "Content-Type", "value": "application/json" }],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"phone\": \"9123456781\",\n  \"otp\": \"PASTE_OTP_FROM_LOGS\"\n}"
+          "raw": "{\n  \"phone\": \"{{staffPhone}}\",\n  \"otp\": \"PASTE_OTP_FROM_LOGS\"\n}"
         },
         "url": "{{baseUrl}}/api/staff/auth/verify-otp"
       }
@@ -72,7 +98,31 @@
       }
     },
     {
-      "name": "5. Verify Token (7842)",
+      "name": "4b. Past Appointments",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{staffToken}}" }],
+        "url": "{{baseUrl}}/api/staff/appointments/past"
+      }
+    },
+    {
+      "name": "4d. Search Appointments",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{staffToken}}" }],
+        "url": "{{baseUrl}}/api/staff/appointments/search?q=John"
+      }
+    },
+    {
+      "name": "4e. Appointment Detail",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{staffToken}}" }],
+        "url": "{{baseUrl}}/api/staff/appointments/{{appointmentId}}"
+      }
+    },
+    {
+      "name": "5. Verify Token (7842 or from patient pass)",
       "event": [
         {
           "listen": "test",
@@ -105,6 +155,22 @@
     },
     {
       "name": "6. Verify QR (alternative)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "if (pm.response.code === 200) {",
+              "  var json = pm.response.json();",
+              "  if (json.id) {",
+              "    pm.collectionVariables.set('appointmentId', json.id);",
+              "  }",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
       "request": {
         "method": "POST",
         "header": [
@@ -129,12 +195,33 @@
       }
     },
     {
+      "name": "4f. Appointment Detail (patient info)",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{staffToken}}" }],
+        "url": "{{baseUrl}}/api/staff/appointments/{{appointmentId}}/detail"
+      }
+    },
+    {
+      "name": "8b. I've Arrived",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Authorization", "value": "Bearer {{staffToken}}" }],
+        "url": "{{baseUrl}}/api/staff/appointments/{{appointmentId}}/arrive"
+      }
+    },
+    {
       "name": "8. Complete Appointment",
       "request": {
         "method": "POST",
         "header": [
-          { "key": "Authorization", "value": "Bearer {{staffToken}}" }
+          { "key": "Authorization", "value": "Bearer {{staffToken}}" },
+          { "key": "Content-Type", "value": "application/json" }
         ],
+        "body": {
+          "mode": "raw",
+          "raw": "{}"
+        },
         "url": "{{baseUrl}}/api/staff/appointments/{{appointmentId}}/complete"
       }
     },
@@ -152,10 +239,124 @@
       "name": "10. Staff Profile",
       "request": {
         "method": "GET",
-        "header": [
-          { "key": "Authorization", "value": "Bearer {{staffToken}}" }
-        ],
+        "header": [{ "key": "Authorization", "value": "Bearer {{staffToken}}" }],
         "url": "{{baseUrl}}/api/staff/profile"
+      }
+    },
+    {
+      "name": "11. Get Schedule",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{staffToken}}" }],
+        "url": "{{baseUrl}}/api/staff/schedule?from={{scheduleFrom}}&to={{scheduleTo}}"
+      }
+    },
+    {
+      "name": "12. Add Schedule Slots",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{staffToken}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"date\": \"{{scheduleFrom}}\",\n  \"times\": [\"05:00 PM\", \"06:00 PM\"]\n}"
+        },
+        "url": "{{baseUrl}}/api/staff/schedule"
+      }
+    },
+    {
+      "name": "13. Update Staff Profile",
+      "request": {
+        "method": "PUT",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{staffToken}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"firstName\": \"Priya\",\n  \"lastName\": \"Menon\",\n  \"email\": \"priya@dr20.com\",\n  \"gender\": \"Female\",\n  \"dateOfBirth\": \"1990-06-15\",\n  \"address\": \"Anna Nagar, Chennai\"\n}"
+        },
+        "url": "{{baseUrl}}/api/staff/profile"
+      }
+    },
+    {
+      "name": "14. Get Working Hours",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{staffToken}}" }],
+        "url": "{{baseUrl}}/api/staff/availability/settings"
+      }
+    },
+    {
+      "name": "15. Save Working Hours",
+      "request": {
+        "method": "PUT",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{staffToken}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"workingDays\": [\"Monday\",\"Tuesday\",\"Wednesday\",\"Thursday\",\"Friday\"],\n  \"morningStart\": \"09:00 AM\",\n  \"morningEnd\": \"01:00 PM\",\n  \"eveningStart\": \"06:00 PM\",\n  \"eveningEnd\": \"09:30 PM\",\n  \"slotDurationMinutes\": 30\n}"
+        },
+        "url": "{{baseUrl}}/api/staff/availability/settings"
+      }
+    },
+    {
+      "name": "16. Mark Unavailable",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{staffToken}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"date\": \"{{scheduleFrom}}\",\n  \"fullDay\": true\n}"
+        },
+        "url": "{{baseUrl}}/api/staff/availability/block"
+      }
+    },
+    {
+      "name": "17. Verification Status",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{staffToken}}" }],
+        "url": "{{baseUrl}}/api/staff/verification-status"
+      }
+    },
+    {
+      "name": "18. Earnings Summary",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{staffToken}}" }],
+        "url": "{{baseUrl}}/api/staff/earnings/summary"
+      }
+    },
+    {
+      "name": "19. Earnings Transactions",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{staffToken}}" }],
+        "url": "{{baseUrl}}/api/staff/earnings/transactions"
+      }
+    },
+    {
+      "name": "20. Verification Documents",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{staffToken}}" }],
+        "url": "{{baseUrl}}/api/staff/documents"
+      }
+    },
+    {
+      "name": "21. Submit Profile",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Authorization", "value": "Bearer {{staffToken}}" }],
+        "url": "{{baseUrl}}/api/staff/profile/submit"
       }
     }
   ]

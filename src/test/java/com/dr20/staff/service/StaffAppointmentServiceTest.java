@@ -6,7 +6,9 @@ import com.dr20.common.exception.ForbiddenException;
 import com.dr20.shared.model.Appointment;
 import com.dr20.shared.model.User;
 import com.dr20.shared.repository.AppointmentRepository;
+import com.dr20.shared.repository.MedicalRecordRepository;
 import com.dr20.shared.repository.UserRepository;
+import com.dr20.shared.service.NotificationHelper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -24,6 +26,8 @@ class StaffAppointmentServiceTest {
 
     @Mock private AppointmentRepository appointmentRepository;
     @Mock private UserRepository userRepository;
+    @Mock private MedicalRecordRepository medicalRecordRepository;
+    @Mock private NotificationHelper notificationHelper;
     @InjectMocks private StaffAppointmentService staffAppointmentService;
 
     @Test
@@ -63,7 +67,7 @@ class StaffAppointmentServiceTest {
         when(appointmentRepository.findById("a1")).thenReturn(Optional.of(appt));
 
         assertThrows(Exception.class,
-                () -> staffAppointmentService.complete("s1", "a1"));
+                () -> staffAppointmentService.complete("s1", "a1", null));
     }
 
     private User staffUser() {

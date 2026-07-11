@@ -2,11 +2,12 @@ package com.dr20.staff.controller;
 
 import com.dr20.shared.model.Appointment;
 import com.dr20.shared.model.Availability;
+import com.dr20.shared.model.AvailabilityBlock;
 import com.dr20.shared.model.User;
+import com.dr20.shared.model.WorkingHoursSettings;
 import com.dr20.common.security.AuthHelper;
 import com.dr20.shared.service.AvailabilityService;
-import com.dr20.staff.service.StaffAppointmentService;
-import com.dr20.staff.service.StaffAuthService;
+import com.dr20.staff.service.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -22,6 +23,10 @@ public class StaffController {
     private final StaffAppointmentService staffAppointmentService;
     private final StaffAuthService staffAuthService;
     private final AvailabilityService availabilityService;
+    private final StaffVerificationService verificationService;
+    private final StaffAvailabilityService staffAvailabilityService;
+    private final StaffEarningsService earningsService;
+    private final StaffDocumentService documentService;
 
     @GetMapping("/dashboard")
     public ResponseEntity<Map<String, Object>> dashboard() {
@@ -53,6 +58,16 @@ public class StaffController {
         return ResponseEntity.ok(staffAppointmentService.getById(AuthHelper.currentUserId(), id));
     }
 
+    @GetMapping("/appointments/{id}/detail")
+    public ResponseEntity<Map<String, Object>> getDetail(@PathVariable String id) {
+        return ResponseEntity.ok(staffAppointmentService.getDetail(AuthHelper.currentUserId(), id));
+    }
+
+    @PostMapping("/appointments/{id}/arrive")
+    public ResponseEntity<Appointment> arrive(@PathVariable String id) {
+        return ResponseEntity.ok(staffAppointmentService.arrive(AuthHelper.currentUserId(), id));
+    }
+
     @PostMapping("/appointments/verify-qr")
     public ResponseEntity<Appointment> verifyQr(@RequestBody Map<String, String> body) {
         return ResponseEntity.ok(staffAppointmentService.verifyQr(
@@ -71,8 +86,9 @@ public class StaffController {
     }
 
     @PostMapping("/appointments/{id}/complete")
-    public ResponseEntity<Appointment> complete(@PathVariable String id) {
-        return ResponseEntity.ok(staffAppointmentService.complete(AuthHelper.currentUserId(), id));
+    public ResponseEntity<Appointment> complete(
+            @PathVariable String id, @RequestBody(required = false) Map<String, String> body) {
+        return ResponseEntity.ok(staffAppointmentService.complete(AuthHelper.currentUserId(), id, body));
     }
 
     @GetMapping("/schedule")
@@ -89,6 +105,55 @@ public class StaffController {
         List<String> times = (List<String>) body.get("times");
         return ResponseEntity.ok(availabilityService.addSlots(
                 user.getLinkedProfileId(), (String) body.get("date"), times));
+    }
+
+    @GetMapping("/availability/settings")
+    public ResponseEntity<WorkingHoursSettings> workingHours() {
+        var user = staffAuthService.getProfile(AuthHelper.currentUserId());
+        return ResponseEntity.ok(staffAvailabilityService.getSettings(user.getLinkedProfileId()));
+    }
+
+    @PutMapping("/availability/settings")
+    public ResponseEntity<WorkingHoursSettings> saveWorkingHours(@RequestBody WorkingHoursSettings body) {
+        var user = staffAuthService.getProfile(AuthHelper.currentUserId());
+        return ResponseEntity.ok(staffAvailabilityService.saveSettings(user.getLinkedProfileId(), body));
+    }
+
+    @PostMapping("/availability/block")
+    public ResponseEntity<AvailabilityBlock> markUnavailable(@RequestBody Map<String, Object> body) {
+        var user = staffAuthService.getProfile(AuthHelper.currentUserId());
+        return ResponseEntity.ok(staffAvailabilityService.markUnavailable(
+                user.getLinkedProfileId(),
+                (String) body.get("date"),
+                body.get("fullDay") == null || Boolean.TRUE.equals(body.get("fullDay")),
+                (String) body.get("halfDayPeriod")));
+    }
+
+    @GetMapping("/verification-status")
+    public ResponseEntity<Map<String, Object>> verificationStatus() {
+        return ResponseEntity.ok(verificationService.getStatus(AuthHelper.currentUserId()));
+    }
+
+    @PostMapping("/profile/submit")
+    public ResponseEntity<?> submitProfile() {
+        return ResponseEntity.ok(verificationService.submitProfile(AuthHelper.currentUserId()));
+    }
+
+    @GetMapping("/earnings/summary")
+    public ResponseEntity<Map<String, Object>> earningsSummary() {
+        var user = staffAuthService.getProfile(AuthHelper.currentUserId());
+        return ResponseEntity.ok(earningsService.getSummary(user.getLinkedProfileId()));
+    }
+
+    @GetMapping("/earnings/transactions")
+    public ResponseEntity<List<Map<String, Object>>> earningsTransactions() {
+        var user = staffAuthService.getProfile(AuthHelper.currentUserId());
+        return ResponseEntity.ok(earningsService.getRecentTransactions(user.getLinkedProfileId()));
+    }
+
+    @GetMapping("/documents")
+    public ResponseEntity<?> documents() {
+        return ResponseEntity.ok(documentService.getDocuments(AuthHelper.currentUserId()));
     }
 
     @GetMapping("/profile")

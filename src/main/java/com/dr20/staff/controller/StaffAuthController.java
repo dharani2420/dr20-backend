@@ -26,6 +26,11 @@ public class StaffAuthController {
         return ResponseEntity.ok(staffAuthService.sendOtp(body.get("phone")));
     }
 
+    @PostMapping("/resend-otp")
+    public ResponseEntity<Map<String, Object>> resendOtp(@RequestBody Map<String, String> body) {
+        return ResponseEntity.ok(staffAuthService.resendOtp(body.get("phone")));
+    }
+
     @PostMapping("/verify-otp")
     public ResponseEntity<Map<String, Object>> verifyOtp(@RequestBody Map<String, String> body) {
         return ResponseEntity.ok(staffAuthService.verifyOtp(body.get("phone"), body.get("otp")));

@@ -45,7 +45,17 @@ public class Appointment {
     private String patientName;
     private String patientAge;
     private String symptoms;
+    private String familyMemberId;
+    private String consultationNotes;
+    private String prescription;
 
+    private String serviceAddress;
+    private Double serviceLatitude;
+    private Double serviceLongitude;
+    private String patientGender;
+    private String patientBloodGroup;
+
+    private LocalDateTime arrivedAt;
     private LocalDateTime verifiedAt;
     private LocalDateTime startedAt;
     private LocalDateTime completedAt;

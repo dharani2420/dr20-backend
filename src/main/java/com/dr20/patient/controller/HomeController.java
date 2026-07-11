@@ -20,6 +20,11 @@ public class HomeController {
         return ResponseEntity.ok(homeService.getHomeData(userId));
     }
 
+    @GetMapping("/api/services")
+    public ResponseEntity<Map<String, Object>> services() {
+        return ResponseEntity.ok(homeService.getServicesScreen());
+    }
+
     @GetMapping("/api/search")
     public ResponseEntity<Map<String, Object>> search(@RequestParam String q) {
         return ResponseEntity.ok(searchService.search(q));

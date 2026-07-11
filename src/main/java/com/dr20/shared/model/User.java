@@ -9,6 +9,7 @@ import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @AllArgsConstructor
@@ -29,6 +30,10 @@ public class User {
     private String gender;
     private String bloodGroup;
     private String profileImage;
+    private String address;
+    private List<String> languages;
+    private String registrationNumber;
+    private String verificationStatus; // SUBMITTED, IN_PROGRESS, APPROVED
 
     private UserRole role = UserRole.PATIENT;
     private UserRole profession;

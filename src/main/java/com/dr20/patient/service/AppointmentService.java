@@ -8,7 +8,9 @@ import com.dr20.shared.model.Doctor;
 import com.dr20.common.enums.AppointmentStatus;
 import com.dr20.shared.repository.AppointmentRepository;
 import com.dr20.shared.repository.DoctorRepository;
+import com.dr20.shared.repository.FamilyMemberRepository;
 import com.dr20.shared.service.AvailabilityService;
+import com.dr20.shared.service.NotificationHelper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -22,12 +24,20 @@ public class AppointmentService {
 
     private final AppointmentRepository appointmentRepository;
     private final DoctorRepository doctorRepository;
+    private final FamilyMemberRepository familyMemberRepository;
     private final AvailabilityService availabilityService;
+    private final NotificationHelper notificationHelper;
     private final Random random = new Random();
 
     public Appointment book(Appointment req) {
         Doctor doctor = doctorRepository.findById(req.getDoctorId())
                 .orElseThrow(() -> new ResourceNotFoundException("Doctor not found"));
+
+        if (req.getFamilyMemberId() != null) {
+            familyMemberRepository.findById(req.getFamilyMemberId())
+                    .filter(fm -> fm.getUserId().equals(req.getUserId()))
+                    .orElseThrow(() -> new BadRequestException("Invalid family member"));
+        }
 
         if (!availabilityService.bookSlot(req.getDoctorId(), req.getAppointmentDate(), req.getAppointmentTime())) {
             throw new BadRequestException("Slot not available");
@@ -35,16 +45,23 @@ public class AppointmentService {
 
         try {
             double fee = doctor.getConsultationFee() != null ? doctor.getConsultationFee() : 500.0;
+            double platformFee = "DR20_CLINIC".equalsIgnoreCase(doctor.getClinicType())
+                    ? 0.0 : AppConstants.PLATFORM_FEE;
             req.setDoctorName(doctor.getName());
             req.setSpecialization(doctor.getSpecialization());
             req.setConsultationFee(fee);
-            req.setPlatformFee(AppConstants.PLATFORM_FEE);
-            req.setTotalFee(fee + AppConstants.PLATFORM_FEE);
+            req.setPlatformFee(platformFee);
+            req.setTotalFee(fee + platformFee);
             req.setStatus(AppointmentStatus.UPCOMING);
             req.setPaymentStatus("PENDING");
             req.setQrData("DR20-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
             req.setTokenNumber(String.format("%04d", random.nextInt(10000)));
-            return appointmentRepository.save(req);
+            Appointment saved = appointmentRepository.save(req);
+            notificationHelper.notify(req.getUserId(), "Appointment Booked",
+                    "Your appointment with " + doctor.getName() + " on " + req.getAppointmentDate()
+                            + " at " + req.getAppointmentTime() + " is pending payment.",
+                    "APPOINTMENT", saved.getId());
+            return saved;
         } catch (Exception e) {
             availabilityService.releaseSlot(req.getDoctorId(), req.getAppointmentDate(), req.getAppointmentTime());
             throw e;
@@ -64,8 +81,13 @@ public class AppointmentService {
         pass.put("time", appt.getAppointmentTime());
         pass.put("patientName", appt.getPatientName());
         pass.put("status", appt.getStatus());
+        pass.put("specialization", appt.getSpecialization());
+        pass.put("paymentStatus", appt.getPaymentStatus());
+        pass.put("activePass", appt.getPaymentStatus() != null && "PAID".equals(appt.getPaymentStatus()));
 
         if (doctor != null) {
+            pass.put("degree", doctor.getDegree());
+            pass.put("doctorImage", doctor.getProfileImage());
             Map<String, Object> clinic = new HashMap<>();
             clinic.put("name", doctor.getClinicName());
             clinic.put("address", doctor.getClinicAddress());
@@ -101,6 +123,38 @@ public class AppointmentService {
         appt.setStatus(AppointmentStatus.CANCELLED);
         availabilityService.releaseSlot(appt.getDoctorId(), appt.getAppointmentDate(), appt.getAppointmentTime());
         return appointmentRepository.save(appt);
+    }
+
+    public Appointment reschedule(String id, String userId, String newDate, String newTime) {
+        Appointment appt = getById(id);
+        if (!appt.getUserId().equals(userId)) {
+            throw new BadRequestException("Not your appointment");
+        }
+        if (appt.getStatus() == AppointmentStatus.CANCELLED
+                || appt.getStatus() == AppointmentStatus.COMPLETED) {
+            throw new BadRequestException("Cannot reschedule this appointment");
+        }
+
+        if (!availabilityService.bookSlot(appt.getDoctorId(), newDate, newTime)) {
+            throw new BadRequestException("Slot not available");
+        }
+
+        availabilityService.releaseSlot(appt.getDoctorId(), appt.getAppointmentDate(), appt.getAppointmentTime());
+        appt.setAppointmentDate(newDate);
+        appt.setAppointmentTime(newTime);
+        return appointmentRepository.save(appt);
+    }
+
+    public List<Appointment> getCancelled(String userId) {
+        return getUserAppointments(userId).stream()
+                .filter(a -> a.getStatus() == AppointmentStatus.CANCELLED)
+                .collect(Collectors.toList());
+    }
+
+    public List<Appointment> getCompleted(String userId) {
+        return getUserAppointments(userId).stream()
+                .filter(a -> a.getStatus() == AppointmentStatus.COMPLETED)
+                .collect(Collectors.toList());
     }
 
     private List<Appointment> filterUser(String userId, boolean upcoming) {

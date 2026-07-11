@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.Transient;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import jakarta.validation.constraints.Email;
@@ -49,7 +50,20 @@ public class Doctor {
     private List<String> availableSlots; // ["9:00 AM","10:00 AM",...]
     private String clinicAddress;
     private String clinicName;
+    private String clinicType; // DR20_CLINIC, PRIVATE_CLINIC
+    private String consultationMode; // In-person, Online
+    private Integer travelRadiusKm;
+    private List<String> languages;
+    private String registrationNumber;
     private Double latitude;
     private Double longitude;
     private Boolean isAvailable = true;
+    private Boolean isVerified = true;
+    private Boolean isClinicVerified = true;
+    private Integer reviewCount;
+    private List<String> expertise;
+    private String clinicHours;
+
+    @Transient
+    private Double distanceKm;
 }

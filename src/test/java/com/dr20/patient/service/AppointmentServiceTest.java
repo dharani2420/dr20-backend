@@ -6,7 +6,9 @@ import com.dr20.shared.model.Appointment;
 import com.dr20.shared.model.Doctor;
 import com.dr20.shared.repository.AppointmentRepository;
 import com.dr20.shared.repository.DoctorRepository;
+import com.dr20.shared.repository.FamilyMemberRepository;
 import com.dr20.shared.service.AvailabilityService;
+import com.dr20.shared.service.NotificationHelper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -25,6 +27,8 @@ class AppointmentServiceTest {
     @Mock private AppointmentRepository appointmentRepository;
     @Mock private DoctorRepository doctorRepository;
     @Mock private AvailabilityService availabilityService;
+    @Mock private FamilyMemberRepository familyMemberRepository;
+    @Mock private NotificationHelper notificationHelper;
     @InjectMocks private AppointmentService appointmentService;
 
     @Test
@@ -35,6 +39,7 @@ class AppointmentServiceTest {
 
         Appointment req = new Appointment();
         req.setDoctorId("d1");
+        req.setUserId("u1");
         req.setAppointmentDate("2026-07-15");
         req.setAppointmentTime("09:00 AM");
 

@@ -25,6 +25,11 @@ public class FamilyController {
         return ResponseEntity.ok(FamilyService.add(userId, member));
     }
 
+    @PutMapping("/{memberId}")
+    public ResponseEntity<FamilyMember> update(@PathVariable String memberId, @RequestBody FamilyMember member) {
+        return ResponseEntity.ok(FamilyService.update(memberId, member));
+    }
+
     @DeleteMapping("/{memberId}")
     public ResponseEntity<String> remove(@PathVariable String memberId) {
         FamilyService.remove(memberId);

@@ -4,10 +4,13 @@ import com.dr20.common.exception.BadRequestException;
 import com.dr20.common.exception.ForbiddenException;
 import com.dr20.common.exception.ResourceNotFoundException;
 import com.dr20.shared.model.Appointment;
+import com.dr20.shared.model.MedicalRecord;
 import com.dr20.shared.model.User;
 import com.dr20.common.enums.AppointmentStatus;
 import com.dr20.shared.repository.AppointmentRepository;
+import com.dr20.shared.repository.MedicalRecordRepository;
 import com.dr20.shared.repository.UserRepository;
+import com.dr20.shared.service.NotificationHelper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -22,6 +25,8 @@ public class StaffAppointmentService {
 
     private final AppointmentRepository appointmentRepository;
     private final UserRepository userRepository;
+    private final MedicalRecordRepository medicalRecordRepository;
+    private final NotificationHelper notificationHelper;
 
     public Map<String, Object> dashboard(String userId) {
         User staff = getStaff(userId);
@@ -78,6 +83,35 @@ public class StaffAppointmentService {
         return appt;
     }
 
+    public Map<String, Object> getDetail(String userId, String appointmentId) {
+        Appointment appt = getById(userId, appointmentId);
+        User patient = userRepository.findById(appt.getUserId()).orElse(null);
+
+        Map<String, Object> detail = new LinkedHashMap<>();
+        detail.put("appointment", appt);
+        detail.put("patientInfo", Map.of(
+                "gender", appt.getPatientGender() != null ? appt.getPatientGender()
+                        : (patient != null ? patient.getGender() : null),
+                "age", appt.getPatientAge(),
+                "bloodGroup", appt.getPatientBloodGroup() != null ? appt.getPatientBloodGroup()
+                        : (patient != null ? patient.getBloodGroup() : null)
+        ));
+        if (appt.getServiceAddress() != null) {
+            detail.put("serviceAddress", Map.of(
+                    "address", appt.getServiceAddress(),
+                    "latitude", appt.getServiceLatitude(),
+                    "longitude", appt.getServiceLongitude()
+            ));
+        }
+        return detail;
+    }
+
+    public Appointment arrive(String userId, String appointmentId) {
+        Appointment appt = getById(userId, appointmentId);
+        appt.setArrivedAt(LocalDateTime.now());
+        return appointmentRepository.save(appt);
+    }
+
     public Appointment verifyQr(String userId, String qrData) {
         Appointment appt = appointmentRepository.findByQrData(qrData)
                 .orElseThrow(() -> new ResourceNotFoundException("Invalid QR code"));
@@ -102,14 +136,33 @@ public class StaffAppointmentService {
         return appointmentRepository.save(appt);
     }
 
-    public Appointment complete(String userId, String appointmentId) {
+    public Appointment complete(String userId, String appointmentId, Map<String, String> body) {
         Appointment appt = getById(userId, appointmentId);
         if (appt.getStatus() != AppointmentStatus.IN_PROGRESS) {
             throw new BadRequestException("Appointment must be in progress");
         }
+        if (body != null) {
+            if (body.get("consultationNotes") != null) appt.setConsultationNotes(body.get("consultationNotes"));
+            if (body.get("prescription") != null) appt.setPrescription(body.get("prescription"));
+        }
         appt.setStatus(AppointmentStatus.COMPLETED);
         appt.setCompletedAt(LocalDateTime.now());
-        return appointmentRepository.save(appt);
+        Appointment saved = appointmentRepository.save(appt);
+
+        MedicalRecord record = new MedicalRecord();
+        record.setUserId(appt.getUserId());
+        record.setAppointmentId(appt.getId());
+        record.setDoctorName(appt.getDoctorName());
+        record.setTitle("Consultation — " + appt.getAppointmentDate());
+        record.setType("VISIT_SUMMARY");
+        record.setNotes(appt.getConsultationNotes());
+        record.setFileUrl(appt.getPrescription() != null ? appt.getPrescription() : "");
+        medicalRecordRepository.save(record);
+
+        notificationHelper.notify(appt.getUserId(), "Consultation Completed",
+                "Your visit with " + appt.getDoctorName() + " is complete. View your medical record.",
+                "APPOINTMENT", appt.getId());
+        return saved;
     }
 
     private Appointment markVerified(Appointment appt) {

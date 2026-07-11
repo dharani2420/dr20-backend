@@ -274,6 +274,63 @@ curl http://localhost:8081/api/staff/profile `
 
 ---
 
+# Staff Registration (optional — before Phase 2)
+
+Maps to Figma **Create Account** (self) or admin adding staff. **No JWT required.**
+
+**Live base URL:** `https://dr20-backend.onrender.com`  
+**Postman:** requests **0a** and **0b** in `postman/Dr20-Staff-Phase1.postman_collection.json`
+
+After register, set collection variable `staffPhone` to the new phone, then run **1. Send OTP → 2. Verify OTP → 3. Dashboard**.
+
+### Self registration (staff app — Create Account)
+
+**POST** `/api/staff/auth/register`
+
+```powershell
+curl -X POST https://dr20-backend.onrender.com/api/staff/auth/register `
+  -H "Content-Type: application/json" `
+  -d "{\"phone\":\"9222222222\",\"profession\":\"DOCTOR\",\"firstName\":\"Anita\",\"lastName\":\"Sharma\",\"email\":\"anita@dr20.com\"}"
+```
+
+| Field | Required | Notes |
+|-------|----------|-------|
+| `phone` | Yes | 10 digits, must be **new** (not already in DB) |
+| `profession` | Yes | `DOCTOR`, `NURSE`, `PHYSIOTHERAPIST`, `LAB_TECH`, `ELDER_CARE` |
+| `firstName`, `lastName`, `email` | Optional | Creates user + doctor profile + 14 days slots |
+
+Expected: `{ "success": true, "message": "Staff registered. Send OTP to login.", "userId", "doctorId" }`
+
+Then OTP login with phone `9222222222` (steps 1–2 in Postman).
+
+### Admin create staff (admin panel)
+
+**POST** `/api/admin/staff`
+
+```powershell
+curl -X POST https://dr20-backend.onrender.com/api/admin/staff `
+  -H "Content-Type: application/json" `
+  -d "{\"phone\":\"9111111111\",\"firstName\":\"Test\",\"lastName\":\"Doctor\",\"profession\":\"DOCTOR\",\"specialization\":\"Dermatology\",\"consultationFee\":\"700\",\"clinicName\":\"Test Clinic\",\"clinicAddress\":\"Test Address\"}"
+```
+
+Creates staff with clinic details. Then OTP login with phone `9111111111`.
+
+### Self vs admin
+
+| | Self register | Admin create |
+|---|---------------|--------------|
+| API | `/api/staff/auth/register` | `/api/admin/staff` |
+| UI | Staff **Create Account** | Admin adds doctor |
+| Duplicate phone | Rejected | Updates existing user if phone exists |
+
+### Registration checklist
+
+- [ ] Self register OR admin create → 200 OK
+- [ ] Set `staffPhone` to new phone in Postman variables
+- [ ] Send OTP → Verify OTP → Dashboard (may be empty until patients book)
+
+---
+
 # Phase 2 — Patient Testing (do LATER)
 
 ---
@@ -461,34 +518,6 @@ Use the `qrData` and `tokenNumber` from **Step 10 (Phase 2)** in staff verify AP
 
 ---
 
-# Admin API (optional)
-
-**POST** `/api/admin/staff` — create new staff (open in dev)
-
-```powershell
-curl -X POST http://localhost:8081/api/admin/staff `
-  -H "Content-Type: application/json" `
-  -d "{\"phone\":\"9111111111\",\"firstName\":\"Test\",\"lastName\":\"Doctor\",\"profession\":\"DOCTOR\",\"specialization\":\"Dermatology\",\"consultationFee\":\"700\",\"clinicName\":\"Test Clinic\",\"clinicAddress\":\"Test Address\"}"
-```
-
-Then login with staff OTP flow using phone `9111111111`.
-
----
-
-# Staff self-register (optional)
-
-**POST** `/api/staff/auth/register`
-
-```powershell
-curl -X POST http://localhost:8081/api/staff/auth/register `
-  -H "Content-Type: application/json" `
-  -d "{\"phone\":\"9222222222\",\"profession\":\"NURSE\",\"firstName\":\"Anita\",\"lastName\":\"R\",\"email\":\"anita@dr20.com\"}"
-```
-
-Professions: `DOCTOR`, `NURSE`, `PHYSIOTHERAPIST`, `LAB_TECH`, `ELDER_CARE`
-
----
-
 # Troubleshooting
 
 | Issue | Fix |
@@ -497,6 +526,7 @@ Professions: `DOCTOR`, `NURSE`, `PHYSIOTHERAPIST`, `LAB_TECH`, `ELDER_CARE`
 | `403 Forbidden` | Wrong role — use staff token for `/api/staff/*` |
 | OTP invalid | Check console for latest OTP; expires in 5 min |
 | Too many OTP requests | Wait 15 min or clear `otp_logs` in MongoDB |
+| Phone already registered | Use a new phone for self-register |
 | No seeded appointment | Drop DB `dr20db` and restart app |
 | MongoDB connection failed | Run `net start MongoDB` (local) or check Atlas URI + IP allowlist (staging) |
 | Port in use | Cloud: host sets `PORT`; local: change `server.port` in `application.properties` |

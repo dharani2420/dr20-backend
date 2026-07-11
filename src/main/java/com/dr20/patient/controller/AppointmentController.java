@@ -48,8 +48,24 @@ public class AppointmentController {
         return ResponseEntity.ok(appointmentService.getPast(userId));
     }
 
+    @GetMapping("/user/{userId}/cancelled")
+    public ResponseEntity<List<Appointment>> cancelled(@PathVariable String userId) {
+        return ResponseEntity.ok(appointmentService.getCancelled(userId));
+    }
+
+    @GetMapping("/user/{userId}/completed")
+    public ResponseEntity<List<Appointment>> completed(@PathVariable String userId) {
+        return ResponseEntity.ok(appointmentService.getCompleted(userId));
+    }
+
     @PutMapping("/{id}/cancel")
     public ResponseEntity<Appointment> cancel(@PathVariable String id) {
         return ResponseEntity.ok(appointmentService.cancel(id, AuthHelper.currentUserId()));
+    }
+
+    @PutMapping("/{id}/reschedule")
+    public ResponseEntity<Appointment> reschedule(@PathVariable String id, @RequestBody Map<String, String> body) {
+        return ResponseEntity.ok(appointmentService.reschedule(
+                id, AuthHelper.currentUserId(), body.get("appointmentDate"), body.get("appointmentTime")));
     }
 }
