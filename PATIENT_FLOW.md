@@ -1,6 +1,6 @@
 # Dr.20 Patient App — Screen → API Map
 
-Figma patient flow (4 screenshot sets). Staff/batch-1 work is **on hold** — this doc is patient-only.
+Figma patient app — all 4 screenshot sets. Screen → API map for Android integration.
 
 **Live backend:** `https://dr20-backend.onrender.com`  
 **Postman:** `postman/Dr20-Patient-E2E.postman_collection.json`  
@@ -40,13 +40,13 @@ Figma patient flow (4 screenshot sets). Staff/batch-1 work is **on hold** — th
 | Screen | UI | API | Status |
 |--------|-----|-----|--------|
 | Choose Specialization | 12 specialties grid | `GET /api/specializations` | **Done** |
-| Services tab | Consultations, symptoms, care services | `GET /api/services` | **Done** (new) |
-| Choose Doctors | Filters: All, ₹20, Nearest, Top Rated, Clinics | `GET /api/doctors` with `maxFee`, `clinicType`, `sort`, `latitude`, `longitude` | **Done** (enhanced) |
+| Services tab | Consultations, symptoms, care services | `GET /api/services` | **Done** |
+| Choose Doctors | Filters: All, ₹20, Nearest, Top Rated, Clinics | `GET /api/doctors` with `maxFee`, `clinicType`, `sort`, `latitude`, `longitude` | **Done** |
 | Doctor Profile | About, expertise, date, slots, clinic, reviews | `GET /api/doctors/{id}/detail`, `/{id}/slots?date=` | **Done** |
-| Booking Confirmation | Patient info, slot, bill (₹20, platform free) | `GET /api/payments/summary/{appointmentId}` | **Done** (enhanced) |
+| Booking Confirmation | Patient info, slot, bill (₹20, platform free) | `GET /api/payments/summary/{appointmentId}` | **Done** |
 | Book | Confirm flow | `POST /api/appointments` | **Done** |
 | Payment success | Green checkmark | `POST /api/payments/create-order` + `verify` (mock) | **Done** |
-| Appointment Pass | QR, token #07, clinic map, Active Pass | `GET /api/appointments/{id}/pass` | **Done** (enhanced) |
+| Appointment Pass | QR, token #07, clinic map, Active Pass | `GET /api/appointments/{id}/pass` | **Done** |
 
 ---
 
@@ -54,7 +54,7 @@ Figma patient flow (4 screenshot sets). Staff/batch-1 work is **on hold** — th
 
 | Screen | UI | API | Status |
 |--------|-----|-----|--------|
-| Appointment list | Tabs: All, Completed, Upcoming, Cancelled | `GET .../user/{id}`, `/upcoming`, `/completed`, `/cancelled` | **Done** (`/completed` new) |
+| Appointment list | Tabs: All, Completed, Upcoming, Cancelled | `GET .../user/{id}`, `/upcoming`, `/completed`, `/cancelled` | **Done** |
 | Appointment Pass detail | Full pass view | `GET /api/appointments/{id}/pass` | **Done** |
 | Profile | Name, phone, Edit Profile | `GET /api/auth/profile/{userId}` | **Done** |
 | Family Members | Mother, Father, Add Member | `GET/POST /api/family/{userId}` | **Done** |

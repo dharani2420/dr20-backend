@@ -6,11 +6,14 @@ import com.dr20.shared.model.WorkingHoursSettings;
 import com.dr20.shared.repository.AvailabilityBlockRepository;
 import com.dr20.shared.repository.DoctorRepository;
 import com.dr20.shared.repository.WorkingHoursSettingsRepository;
+import com.dr20.shared.service.AvailabilityService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -19,6 +22,7 @@ public class StaffAvailabilityService {
     private final WorkingHoursSettingsRepository settingsRepository;
     private final AvailabilityBlockRepository blockRepository;
     private final DoctorRepository doctorRepository;
+    private final AvailabilityService availabilityService;
 
     public WorkingHoursSettings getSettings(String doctorId) {
         doctorRepository.findById(doctorId)
@@ -52,6 +56,29 @@ public class StaffAvailabilityService {
         block.setFullDay(fullDay);
         block.setHalfDayPeriod(halfDayPeriod);
         return blockRepository.save(block);
+    }
+
+    public Map<String, Object> getDaySchedule(String doctorId, String date) {
+        doctorRepository.findById(doctorId)
+                .orElseThrow(() -> new ResourceNotFoundException("Doctor not found"));
+        WorkingHoursSettings settings = getSettings(doctorId);
+
+        Map<String, Object> res = new LinkedHashMap<>();
+        res.put("date", date);
+        res.put("workingHours", Map.of(
+                "morning", Map.of("start", settings.getMorningStart(), "end", settings.getMorningEnd()),
+                "evening", Map.of("start", settings.getEveningStart(), "end", settings.getEveningEnd()),
+                "workingDays", settings.getWorkingDays(),
+                "slotDurationMinutes", settings.getSlotDurationMinutes()
+        ));
+        res.put("slots", availabilityService.getSlotsWithStatus(doctorId, date));
+        blockRepository.findByDoctorIdAndDate(doctorId, date).ifPresent(block -> {
+            res.put("unavailable", Map.of(
+                    "fullDay", block.isFullDay(),
+                    "halfDayPeriod", block.getHalfDayPeriod()
+            ));
+        });
+        return res;
     }
 
     private WorkingHoursSettings defaultSettings(String doctorId) {

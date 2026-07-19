@@ -27,6 +27,7 @@ public class StaffController {
     private final StaffAvailabilityService staffAvailabilityService;
     private final StaffEarningsService earningsService;
     private final StaffDocumentService documentService;
+    private final StaffProfileService profileService;
 
     @GetMapping("/dashboard")
     public ResponseEntity<Map<String, Object>> dashboard() {
@@ -53,6 +54,11 @@ public class StaffController {
         return ResponseEntity.ok(staffAppointmentService.search(AuthHelper.currentUserId(), q));
     }
 
+    @GetMapping("/appointments/counts")
+    public ResponseEntity<Map<String, Object>> bookingCounts() {
+        return ResponseEntity.ok(staffAppointmentService.bookingCounts(AuthHelper.currentUserId()));
+    }
+
     @GetMapping("/appointments/{id}")
     public ResponseEntity<Appointment> getById(@PathVariable String id) {
         return ResponseEntity.ok(staffAppointmentService.getById(AuthHelper.currentUserId(), id));
@@ -63,8 +69,13 @@ public class StaffController {
         return ResponseEntity.ok(staffAppointmentService.getDetail(AuthHelper.currentUserId(), id));
     }
 
+    @GetMapping("/appointments/{id}/navigate")
+    public ResponseEntity<Map<String, Object>> navigate(@PathVariable String id) {
+        return ResponseEntity.ok(staffAppointmentService.getNavigate(AuthHelper.currentUserId(), id));
+    }
+
     @PostMapping("/appointments/{id}/arrive")
-    public ResponseEntity<Appointment> arrive(@PathVariable String id) {
+    public ResponseEntity<Map<String, Object>> arrive(@PathVariable String id) {
         return ResponseEntity.ok(staffAppointmentService.arrive(AuthHelper.currentUserId(), id));
     }
 
@@ -96,6 +107,12 @@ public class StaffController {
             @RequestParam String from, @RequestParam String to) {
         var user = staffAuthService.getProfile(AuthHelper.currentUserId());
         return ResponseEntity.ok(availabilityService.getSchedule(user.getLinkedProfileId(), from, to));
+    }
+
+    @GetMapping("/schedule/day")
+    public ResponseEntity<Map<String, Object>> scheduleDay(@RequestParam String date) {
+        var user = staffAuthService.getProfile(AuthHelper.currentUserId());
+        return ResponseEntity.ok(staffAvailabilityService.getDaySchedule(user.getLinkedProfileId(), date));
     }
 
     @PostMapping("/schedule")
@@ -152,8 +169,46 @@ public class StaffController {
     }
 
     @GetMapping("/documents")
-    public ResponseEntity<?> documents() {
-        return ResponseEntity.ok(documentService.getDocuments(AuthHelper.currentUserId()));
+    public ResponseEntity<Map<String, Object>> documents() {
+        return ResponseEntity.ok(documentService.getDocumentsScreen(AuthHelper.currentUserId()));
+    }
+
+    @PostMapping("/documents")
+    public ResponseEntity<com.dr20.shared.model.StaffDocument> uploadDocument(
+            @RequestBody Map<String, String> body) {
+        return ResponseEntity.ok(documentService.uploadDocument(AuthHelper.currentUserId(), body));
+    }
+
+    @PostMapping("/documents/bank")
+    public ResponseEntity<com.dr20.shared.model.StaffBankDetails> saveBankDetails(
+            @RequestBody Map<String, String> body) {
+        return ResponseEntity.ok(documentService.saveBankDetails(AuthHelper.currentUserId(), body));
+    }
+
+    @GetMapping("/profile/summary")
+    public ResponseEntity<Map<String, Object>> profileSummary() {
+        return ResponseEntity.ok(profileService.getProfileSummary(AuthHelper.currentUserId()));
+    }
+
+    @GetMapping("/profile/personal")
+    public ResponseEntity<Map<String, Object>> personalProfile() {
+        return ResponseEntity.ok(profileService.getPersonalProfile(AuthHelper.currentUserId()));
+    }
+
+    @GetMapping("/profile/professional")
+    public ResponseEntity<Map<String, Object>> professionalProfile() {
+        return ResponseEntity.ok(profileService.getProfessionalProfile(AuthHelper.currentUserId()));
+    }
+
+    @PutMapping("/profile/professional")
+    public ResponseEntity<Map<String, Object>> updateProfessionalProfile(@RequestBody Map<String, Object> body) {
+        return ResponseEntity.ok(profileService.updateProfessionalProfile(AuthHelper.currentUserId(), body));
+    }
+
+    @PostMapping("/profile/photo")
+    public ResponseEntity<User> updateProfilePhoto(@RequestBody Map<String, String> body) {
+        return ResponseEntity.ok(profileService.updateProfilePhoto(
+                AuthHelper.currentUserId(), body.get("fileUrl")));
     }
 
     @GetMapping("/profile")
@@ -163,6 +218,6 @@ public class StaffController {
 
     @PutMapping("/profile")
     public ResponseEntity<User> updateProfile(@RequestBody User user) {
-        return ResponseEntity.ok(staffAuthService.updateProfile(AuthHelper.currentUserId(), user));
+        return ResponseEntity.ok(profileService.updatePersonalProfile(AuthHelper.currentUserId(), user));
     }
 }

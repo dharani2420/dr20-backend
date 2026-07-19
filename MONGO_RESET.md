@@ -1,7 +1,7 @@
 # Mongo Atlas Reset Guide — Fresh Dr.20 Seed Data
 
 **Database:** `dr20db` (on your Atlas cluster)  
-**Purpose:** Load Figma-aligned demo data after clearing old batch-1 records.
+**Purpose:** Load Figma-aligned demo data after clearing old records.
 
 **⚠️ You must confirm before deleting anything.** This doc only lists what to clear and what you get after redeploy.
 

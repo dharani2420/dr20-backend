@@ -42,8 +42,13 @@ public class StaffEarningsService {
         Map<String, Object> res = new LinkedHashMap<>();
         res.put("totalEarnings", total);
         res.put("todayEarnings", todayEarnings);
+        res.put("thisMonth", monthEarnings);
         res.put("monthEarnings", monthEarnings);
         res.put("completedAppointments", completed.size());
+        res.put("automaticPayout", Map.of(
+                "title", "Automatic Payout",
+                "message", "Your earnings are automatically transferred to your registered bank account every Tuesday."
+        ));
         return res;
     }
 
@@ -55,6 +60,7 @@ public class StaffEarningsService {
                 .collect(Collectors.toList());
 
         List<Map<String, Object>> txs = new ArrayList<>();
+        String today = LocalDate.now().toString();
         for (Appointment a : completed) {
             Map<String, Object> tx = new LinkedHashMap<>();
             tx.put("appointmentId", a.getId());
@@ -63,8 +69,17 @@ public class StaffEarningsService {
             tx.put("amount", a.getConsultationFee());
             tx.put("date", a.getAppointmentDate());
             tx.put("time", a.getAppointmentTime());
+            tx.put("displayDate", formatDisplayDate(a.getAppointmentDate(), a.getAppointmentTime(), today));
             txs.add(tx);
         }
         return txs;
+    }
+
+    private String formatDisplayDate(String date, String time, String today) {
+        if (date == null) return time;
+        if (today.equals(date)) {
+            return "Today - " + (time != null ? time : "");
+        }
+        return date + (time != null ? " - " + time : "");
     }
 }

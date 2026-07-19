@@ -1,0 +1,610 @@
+{
+  "info": {
+    "name": "Dr.20 Staff App (E2E)",
+    "description": "Full staff E2E + CRUD coverage.\n\nFolders: Auth/Registration, Verification/Documents, Dashboard/Bookings, Appointments (Verify/Complete), Schedule/Availability, Profile, Earnings.\n\nVariables: baseUrl, staffPhone, newStaffPhone, staffToken, userId, linkedProfileId, appointmentId, homeVisitAppointmentId, scheduleFrom, scheduleTo, scheduleDate, verifyToken, qrData\n\nOTP: Render Logs. Auth tab = No Auth; one Authorization header on protected calls.\n\nSeed staff: phone 9123456781. Verify token 07 / QR DR20-SEED001. Pair with Patient E2E for book → staff verify flow.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "https://dr20-backend.onrender.com" },
+    { "key": "staffPhone", "value": "9123456781" },
+    { "key": "newStaffPhone", "value": "9222222222" },
+    { "key": "adminStaffPhone", "value": "9111111111" },
+    { "key": "staffToken", "value": "" },
+    { "key": "userId", "value": "" },
+    { "key": "linkedProfileId", "value": "" },
+    { "key": "appointmentId", "value": "" },
+    { "key": "homeVisitAppointmentId", "value": "" },
+    { "key": "scheduleFrom", "value": "" },
+    { "key": "scheduleTo", "value": "" },
+    { "key": "scheduleDate", "value": "" },
+    { "key": "verifyToken", "value": "07" },
+    { "key": "qrData", "value": "DR20-SEED001" }
+  ],
+  "item": [
+    {
+      "name": "01 — Auth & Registration",
+      "item": [
+        {
+          "name": "0a. Staff Self Register (CREATE)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"{{newStaffPhone}}\",\n  \"profession\": \"DOCTOR\",\n  \"firstName\": \"Anita\",\n  \"lastName\": \"Sharma\",\n  \"email\": \"anita@dr20.com\"\n}"
+            },
+            "url": "{{baseUrl}}/api/staff/auth/register"
+          }
+        },
+        {
+          "name": "0b. Admin Create Staff (CREATE — optional)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"{{adminStaffPhone}}\",\n  \"firstName\": \"Test\",\n  \"lastName\": \"Doctor\",\n  \"profession\": \"DOCTOR\",\n  \"specialization\": \"Dermatology\",\n  \"consultationFee\": \"700\",\n  \"clinicName\": \"Test Clinic\",\n  \"clinicAddress\": \"Test Address\"\n}"
+            },
+            "url": "{{baseUrl}}/api/admin/staff"
+          }
+        },
+        {
+          "name": "1. Send OTP (Login)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"phone\": \"{{staffPhone}}\"\n}" },
+            "url": "{{baseUrl}}/api/staff/auth/send-otp"
+          }
+        },
+        {
+          "name": "1b. Send OTP (New Staff Signup)",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "if (pm.response.code === 200) {",
+                "  pm.collectionVariables.set('staffPhone', pm.collectionVariables.get('newStaffPhone'));",
+                "}"
+              ],
+              "type": "text/javascript"
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"phone\": \"{{newStaffPhone}}\"\n}" },
+            "url": "{{baseUrl}}/api/staff/auth/send-otp"
+          }
+        },
+        {
+          "name": "1c. Resend OTP",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"phone\": \"{{staffPhone}}\"\n}" },
+            "url": "{{baseUrl}}/api/staff/auth/resend-otp"
+          }
+        },
+        {
+          "name": "2. Verify OTP",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "function localDateStr(offsetDays) {",
+                "  var d = new Date();",
+                "  d.setDate(d.getDate() + offsetDays);",
+                "  var y = d.getFullYear();",
+                "  var m = String(d.getMonth() + 1).padStart(2, '0');",
+                "  var day = String(d.getDate()).padStart(2, '0');",
+                "  return y + '-' + m + '-' + day;",
+                "}",
+                "if (pm.response.code === 200) {",
+                "  var json = pm.response.json();",
+                "  if (json.token) pm.collectionVariables.set('staffToken', json.token);",
+                "  if (json.userId) pm.collectionVariables.set('userId', json.userId);",
+                "  if (json.linkedProfileId) pm.collectionVariables.set('linkedProfileId', json.linkedProfileId);",
+                "  pm.collectionVariables.set('scheduleDate', localDateStr(0));",
+                "  pm.collectionVariables.set('scheduleFrom', localDateStr(0));",
+                "  pm.collectionVariables.set('scheduleTo', localDateStr(7));",
+                "}"
+              ],
+              "type": "text/javascript"
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"phone\": \"{{staffPhone}}\",\n  \"otp\": \"PASTE_OTP_FROM_LOGS\"\n}" },
+            "url": "{{baseUrl}}/api/staff/auth/verify-otp"
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 — Verification & Documents",
+      "item": [
+        {
+          "name": "17. Verification Status (READ)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{staffToken}}" }],
+            "url": "{{baseUrl}}/api/staff/verification-status"
+          }
+        },
+        {
+          "name": "21. Submit Profile (CREATE)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{staffToken}}" }],
+            "url": "{{baseUrl}}/api/staff/profile/submit"
+          }
+        },
+        {
+          "name": "20. Verification Documents Screen (READ)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{staffToken}}" }],
+            "url": "{{baseUrl}}/api/staff/documents"
+          }
+        },
+        {
+          "name": "20b. Upload Document (CREATE — staging fileUrl)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{staffToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"IDENTITY\",\n  \"title\": \"Aadhar Card\",\n  \"fileUrl\": \"https://example.com/docs/aadhaar-new.pdf\"\n}"
+            },
+            "url": "{{baseUrl}}/api/staff/documents"
+          }
+        },
+        {
+          "name": "20c. Save Bank Details (CREATE/UPDATE)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{staffToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bankName\": \"HDFC Bank\",\n  \"accountNumber\": \"501002456789643\",\n  \"ifscCode\": \"HDFC0001234\",\n  \"documentUrl\": \"https://example.com/docs/bank-passbook.jpg\"\n}"
+            },
+            "url": "{{baseUrl}}/api/staff/documents/bank"
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 — Dashboard & Bookings (READ/SEARCH)",
+      "item": [
+        {
+          "name": "3. Dashboard (READ)",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "if (pm.response.code === 200) {",
+                "  var json = pm.response.json();",
+                "  if (json.upcomingAppointments && json.upcomingAppointments.length > 0) {",
+                "    pm.collectionVariables.set('appointmentId', json.upcomingAppointments[0].id);",
+                "  }",
+                "}"
+              ],
+              "type": "text/javascript"
+            }
+          }],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{staffToken}}" }],
+            "url": "{{baseUrl}}/api/staff/dashboard"
+          }
+        },
+        {
+          "name": "4c. Booking Tab Counts (READ)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{staffToken}}" }],
+            "url": "{{baseUrl}}/api/staff/appointments/counts"
+          }
+        },
+        {
+          "name": "4. Upcoming Appointments (READ)",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "if (pm.response.code === 200) {",
+                "  var list = pm.response.json();",
+                "  if (Array.isArray(list) && list.length > 0 && list[0].id) {",
+                "    pm.collectionVariables.set('appointmentId', list[0].id);",
+                "  }",
+                "}"
+              ],
+              "type": "text/javascript"
+            }
+          }],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{staffToken}}" }],
+            "url": "{{baseUrl}}/api/staff/appointments/upcoming"
+          }
+        },
+        {
+          "name": "4b. Completed Appointments (READ)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{staffToken}}" }],
+            "url": "{{baseUrl}}/api/staff/appointments/past"
+          }
+        },
+        {
+          "name": "4d. Cancelled Appointments (READ)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{staffToken}}" }],
+            "url": "{{baseUrl}}/api/staff/appointments/cancelled"
+          }
+        },
+        {
+          "name": "4e. Search by Token (SEARCH)",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "if (pm.response.code === 200) {",
+                "  var list = pm.response.json();",
+                "  if (Array.isArray(list) && list.length > 0 && list[0].id) {",
+                "    pm.collectionVariables.set('appointmentId', list[0].id);",
+                "  }",
+                "}"
+              ],
+              "type": "text/javascript"
+            }
+          }],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{staffToken}}" }],
+            "url": "{{baseUrl}}/api/staff/appointments/search?q={{verifyToken}}"
+          }
+        },
+        {
+          "name": "4f. Search by Patient Name (SEARCH)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{staffToken}}" }],
+            "url": "{{baseUrl}}/api/staff/appointments/search?q=pravin"
+          }
+        },
+        {
+          "name": "9. Dashboard After Complete (READ)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{staffToken}}" }],
+            "url": "{{baseUrl}}/api/staff/dashboard"
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 — Appointments (Verify & Complete)",
+      "item": [
+        {
+          "name": "4g. Get Appointment by ID (READ)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{staffToken}}" }],
+            "url": "{{baseUrl}}/api/staff/appointments/{{appointmentId}}"
+          }
+        },
+        {
+          "name": "4h. Appointment Detail (READ)",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "if (pm.response.code === 200) {",
+                "  var json = pm.response.json();",
+                "  if (json.appointment && json.appointment.consultationType === 'Home Nursing') {",
+                "    pm.collectionVariables.set('homeVisitAppointmentId', json.appointment.id);",
+                "  }",
+                "}"
+              ],
+              "type": "text/javascript"
+            }
+          }],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{staffToken}}" }],
+            "url": "{{baseUrl}}/api/staff/appointments/{{appointmentId}}/detail"
+          }
+        },
+        {
+          "name": "4i. Navigate to Patient (READ — home visit)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{staffToken}}" }],
+            "url": "{{baseUrl}}/api/staff/appointments/{{homeVisitAppointmentId}}/navigate"
+          }
+        },
+        {
+          "name": "8b. I've Arrived (UPDATE — home visit)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{staffToken}}" }],
+            "url": "{{baseUrl}}/api/staff/appointments/{{homeVisitAppointmentId}}/arrive"
+          }
+        },
+        {
+          "name": "5. Verify Token (UPDATE)",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "if (pm.response.code === 200) {",
+                "  var json = pm.response.json();",
+                "  if (json.id) pm.collectionVariables.set('appointmentId', json.id);",
+                "}"
+              ],
+              "type": "text/javascript"
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{staffToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"tokenNumber\": \"{{verifyToken}}\"\n}" },
+            "url": "{{baseUrl}}/api/staff/appointments/verify-token"
+          }
+        },
+        {
+          "name": "6. Verify QR (UPDATE — alternative)",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "if (pm.response.code === 200) {",
+                "  var json = pm.response.json();",
+                "  if (json.id) pm.collectionVariables.set('appointmentId', json.id);",
+                "}"
+              ],
+              "type": "text/javascript"
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{staffToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"qrData\": \"{{qrData}}\"\n}" },
+            "url": "{{baseUrl}}/api/staff/appointments/verify-qr"
+          }
+        },
+        {
+          "name": "7. Start Consultation (UPDATE)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{staffToken}}" }],
+            "url": "{{baseUrl}}/api/staff/appointments/{{appointmentId}}/start"
+          }
+        },
+        {
+          "name": "8. Complete Appointment (UPDATE)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{staffToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"consultationNotes\": \"Consultation completed successfully.\",\n  \"prescription\": \"https://example.com/prescriptions/sample.pdf\"\n}"
+            },
+            "url": "{{baseUrl}}/api/staff/appointments/{{appointmentId}}/complete"
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 — Schedule & Availability (CRUD)",
+      "item": [
+        {
+          "name": "11. Get Schedule Range (READ)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{staffToken}}" }],
+            "url": "{{baseUrl}}/api/staff/schedule?from={{scheduleFrom}}&to={{scheduleTo}}"
+          }
+        },
+        {
+          "name": "11b. Schedule Day View (READ)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{staffToken}}" }],
+            "url": "{{baseUrl}}/api/staff/schedule/day?date={{scheduleDate}}"
+          }
+        },
+        {
+          "name": "12. Add Schedule Slots (CREATE)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{staffToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"date\": \"{{scheduleDate}}\",\n  \"times\": [\"05:00 PM\", \"06:00 PM\"]\n}"
+            },
+            "url": "{{baseUrl}}/api/staff/schedule"
+          }
+        },
+        {
+          "name": "14. Get Working Hours (READ)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{staffToken}}" }],
+            "url": "{{baseUrl}}/api/staff/availability/settings"
+          }
+        },
+        {
+          "name": "15. Save Working Hours (UPDATE)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{staffToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"workingDays\": [\"Monday\",\"Tuesday\",\"Wednesday\",\"Thursday\",\"Friday\"],\n  \"morningStart\": \"09:00 AM\",\n  \"morningEnd\": \"01:00 PM\",\n  \"eveningStart\": \"06:00 PM\",\n  \"eveningEnd\": \"09:30 PM\",\n  \"slotDurationMinutes\": 30\n}"
+            },
+            "url": "{{baseUrl}}/api/staff/availability/settings"
+          }
+        },
+        {
+          "name": "16. Mark Unavailable — Full Day (CREATE)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{staffToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"date\": \"{{scheduleDate}}\",\n  \"fullDay\": true\n}"
+            },
+            "url": "{{baseUrl}}/api/staff/availability/block"
+          }
+        },
+        {
+          "name": "16b. Mark Unavailable — Half Day (UPDATE)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{staffToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"date\": \"{{scheduleDate}}\",\n  \"fullDay\": false,\n  \"halfDayPeriod\": \"MORNING\"\n}"
+            },
+            "url": "{{baseUrl}}/api/staff/availability/block"
+          }
+        }
+      ]
+    },
+    {
+      "name": "06 — Profile (CRUD)",
+      "item": [
+        {
+          "name": "10b. Profile Summary — menu (READ)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{staffToken}}" }],
+            "url": "{{baseUrl}}/api/staff/profile/summary"
+          }
+        },
+        {
+          "name": "10c. Personal Profile (READ)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{staffToken}}" }],
+            "url": "{{baseUrl}}/api/staff/profile/personal"
+          }
+        },
+        {
+          "name": "10. Get Profile (READ)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{staffToken}}" }],
+            "url": "{{baseUrl}}/api/staff/profile"
+          }
+        },
+        {
+          "name": "13. Update Personal Profile (UPDATE)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{staffToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Priya\",\n  \"lastName\": \"Menon\",\n  \"email\": \"priya@dr20.com\",\n  \"gender\": \"Female\",\n  \"dateOfBirth\": \"1990-06-15\",\n  \"address\": \"Anna Nagar, Chennai\"\n}"
+            },
+            "url": "{{baseUrl}}/api/staff/profile"
+          }
+        },
+        {
+          "name": "10f. Update Profile Photo (UPDATE)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{staffToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fileUrl\": \"https://example.com/docs/priya-profile.jpg\"\n}"
+            },
+            "url": "{{baseUrl}}/api/staff/profile/photo"
+          }
+        },
+        {
+          "name": "10d. Professional Profile (READ)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{staffToken}}" }],
+            "url": "{{baseUrl}}/api/staff/profile/professional"
+          }
+        },
+        {
+          "name": "10e. Update Professional Profile (UPDATE)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{staffToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"experience\": 8,\n  \"languages\": [\"Tamil\", \"English\"],\n  \"clinicName\": \"Dr.20 Tambaram Clinic\",\n  \"registrationNumber\": \"TNMC-2018-4521\",\n  \"consultationMode\": \"In-person\",\n  \"travelRadiusKm\": 10\n}"
+            },
+            "url": "{{baseUrl}}/api/staff/profile/professional"
+          }
+        }
+      ]
+    },
+    {
+      "name": "07 — Earnings (READ)",
+      "item": [
+        {
+          "name": "18. Earnings Summary (READ)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{staffToken}}" }],
+            "url": "{{baseUrl}}/api/staff/earnings/summary"
+          }
+        },
+        {
+          "name": "19. Earnings Transactions (READ)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{staffToken}}" }],
+            "url": "{{baseUrl}}/api/staff/earnings/transactions"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -28,6 +28,7 @@ public class DataSeedService {
     private final MedicalRecordRepository medicalRecordRepository;
     private final StaffVerificationRepository staffVerificationRepository;
     private final StaffDocumentRepository staffDocumentRepository;
+    private final StaffBankDetailsRepository staffBankDetailsRepository;
     private final FamilyMemberRepository familyMemberRepository;
 
     @Value("${seed.admin.phone:9000000001}")
@@ -82,6 +83,13 @@ public class DataSeedService {
         user.setProfession(UserRole.valueOf(role));
         user.setPhoneVerified(true);
         user.setGender("Priya".equals(first) || "Harini".equals(first) ? "Female" : "Male");
+        if ("Priya".equals(first)) {
+            user.setAddress("Anna Nagar, Chennai");
+            user.setDateOfBirth("1990-06-15");
+            user.setLanguages(Arrays.asList("Tamil", "English"));
+            user.setRegistrationNumber("TNMC-2018-4521");
+            user.setProfileImage("https://example.com/docs/priya-profile.jpg");
+        }
         userRepository.save(user);
 
         Doctor doctor = new Doctor();
@@ -108,6 +116,12 @@ public class DataSeedService {
         doctor.setIsAvailable(true);
         doctor.setIsVerified(true);
         doctor.setIsClinicVerified(true);
+        if ("Priya".equals(first)) {
+            doctor.setClinicName("Dr.20 Tambaram Clinic");
+            doctor.setLanguages(Arrays.asList("Tamil", "English"));
+            doctor.setRegistrationNumber("TNMC-2018-4521");
+            doctor.setProfileImage("https://example.com/docs/priya-profile.jpg");
+        }
         doctorRepository.save(doctor);
 
         user.setLinkedProfileId(doctor.getId());
@@ -138,58 +152,87 @@ public class DataSeedService {
         userRepository.save(patient);
 
         String tomorrow = LocalDate.now().plusDays(1).toString();
+        String today = LocalDate.now().toString();
+        String reason = "Patient has been experiencing fever and weakness for the past 2 days. "
+                + "Requested a home nursing visit for vital check-up and medication assistance.";
 
+        seedStaffAppointment(doctor, patient, tomorrow, "09:30 AM", "General Consultation",
+                AppointmentStatus.CONFIRMED, "07", "DR20-SEED001", reason, null, null, null);
+
+        seedStaffAppointment(doctor, patient, today, "06:00 PM", "General Consultation",
+                AppointmentStatus.CONFIRMED, "03", "DR20-STAFF003", "General Consultation", null, null, null);
+        seedStaffAppointment(doctor, patient, today, "06:30 PM", "General Consultation",
+                AppointmentStatus.CONFIRMED, "04", "DR20-STAFF004", "General Consultation", null, null, null);
+        seedStaffAppointment(doctor, patient, today, "07:00 PM", "General Consultation",
+                AppointmentStatus.CONFIRMED, "05", "DR20-STAFF005", "General Consultation", null, null, null);
+
+        seedStaffAppointment(doctor, patient, today, "09:30 AM", "Home Nursing",
+                AppointmentStatus.CONFIRMED, "02", "DR20-HOME001", reason,
+                "24, Gandhi St, Tambaram, Chennai - 600047.", 12.9255, 80.1025);
+
+        seedStaffAppointment(doctor, patient, today, "10:00 AM", "General Consultation",
+                AppointmentStatus.COMPLETED, "01", "DR20-DONE01", "General Consultation", null, null, null);
+        seedStaffAppointment(doctor, patient, today, "11:00 AM", "General Consultation",
+                AppointmentStatus.COMPLETED, "02", "DR20-DONE02", "General Consultation", null, null, null);
+
+        Doctor harini = doctors.stream()
+                .filter(d -> d.getName() != null && d.getName().contains("Harini"))
+                .findFirst().orElse(doctor);
+        seedStaffAppointment(harini, patient, LocalDate.now().minusDays(1).toString(), "10:00 AM",
+                "General Consultation", AppointmentStatus.COMPLETED, "07", "DR20-COMPLETED01",
+                "General Consultation", null, null, null);
+
+        System.out.println("Seeded sample appointment — token: 07, qr: DR20-SEED001");
+        System.out.println("Patient test phone: 9876543210");
+        System.out.println("Staff test phone: " + doctor.getPhone());
+    }
+
+    private void seedStaffAppointment(Doctor doctor, User patient, String date, String time,
+                                      String consultationType, AppointmentStatus status,
+                                      String token, String qr, String symptoms,
+                                      String serviceAddress, Double serviceLat, Double serviceLng) {
+        seedStaffAppointment(doctor, patient, date, time, consultationType, status, token, qr,
+                symptoms, serviceAddress, serviceLat, serviceLng, null);
+    }
+
+    private void seedStaffAppointment(Doctor doctor, User patient, String date, String time,
+                                      String consultationType, AppointmentStatus status,
+                                      String token, String qr, String symptoms,
+                                      String serviceAddress, Double serviceLat, Double serviceLng,
+                                      Double consultationFeeOverride) {
+        if (doctor == null) return;
         Appointment appt = new Appointment();
         appt.setUserId(patient.getId());
         appt.setDoctorId(doctor.getId());
         appt.setDoctorName(doctor.getName());
         appt.setSpecialization(doctor.getSpecialization());
-        appt.setAppointmentDate(tomorrow);
-        appt.setAppointmentTime("09:30 AM");
-        appt.setConsultationType("In-Person");
-        appt.setStatus(AppointmentStatus.CONFIRMED);
-        appt.setConsultationFee(20.0);
-        appt.setPlatformFee(0.0);
-        appt.setTotalFee(20.0);
+        appt.setAppointmentDate(date);
+        appt.setAppointmentTime(time);
+        appt.setConsultationType(consultationType);
+        appt.setStatus(status);
+        double fee = consultationFeeOverride != null ? consultationFeeOverride
+                : (doctor.getConsultationFee() != null ? doctor.getConsultationFee() : 20.0);
+        appt.setConsultationFee(fee);
+        appt.setPlatformFee("DR20_CLINIC".equalsIgnoreCase(doctor.getClinicType()) ? 0.0 : 20.0);
+        appt.setTotalFee(appt.getConsultationFee() + appt.getPlatformFee());
         appt.setPaymentStatus("PAID");
         appt.setPatientName("pravin av");
         appt.setPatientAge("26");
         appt.setPatientGender("Male");
         appt.setPatientBloodGroup("O+");
-        appt.setSymptoms("General Consultation");
-        appt.setQrData("DR20-SEED001");
-        appt.setTokenNumber("07");
+        appt.setSymptoms(symptoms);
+        appt.setQrData(qr);
+        appt.setTokenNumber(token);
+        if (serviceAddress != null) {
+            appt.setServiceAddress(serviceAddress);
+            appt.setServiceLatitude(serviceLat);
+            appt.setServiceLongitude(serviceLng);
+        }
         appointmentRepository.save(appt);
 
-        availabilityService.bookSlot(doctor.getId(), tomorrow, "09:30 AM");
-
-        Doctor harini = doctors.stream()
-                .filter(d -> d.getName() != null && d.getName().contains("Harini"))
-                .findFirst().orElse(doctor);
-        Appointment completed = new Appointment();
-        completed.setUserId(patient.getId());
-        completed.setDoctorId(harini.getId());
-        completed.setDoctorName(harini.getName());
-        completed.setSpecialization(harini.getSpecialization());
-        completed.setAppointmentDate(LocalDate.now().minusDays(1).toString());
-        completed.setAppointmentTime("10:00 AM");
-        completed.setConsultationType("In-Person");
-        completed.setStatus(AppointmentStatus.COMPLETED);
-        completed.setConsultationFee(300.0);
-        completed.setPlatformFee(20.0);
-        completed.setTotalFee(320.0);
-        completed.setPaymentStatus("PAID");
-        completed.setPatientName("pravin av");
-        completed.setPatientAge("26");
-        completed.setPatientGender("Male");
-        completed.setPatientBloodGroup("O+");
-        completed.setQrData("DR20-COMPLETED01");
-        completed.setTokenNumber("07");
-        appointmentRepository.save(completed);
-
-        System.out.println("Seeded sample appointment — token: 07, qr: DR20-SEED001");
-        System.out.println("Patient test phone: 9876543210");
-        System.out.println("Staff test phone: " + doctor.getPhone());
+        if (status != AppointmentStatus.COMPLETED) {
+            availabilityService.bookSlot(doctor.getId(), date, time);
+        }
     }
 
     private void seedFamilyMembers() {
@@ -294,11 +337,43 @@ public class DataSeedService {
             staffVerificationRepository.save(v);
 
             staffDocumentRepository.save(new StaffDocument(null, staff.getId(), "IDENTITY",
-                    "Identity Proof (Aadhaar)", "https://example.com/docs/aadhaar.pdf", "VERIFIED", java.time.LocalDateTime.now()));
+                    "Aadhar Card", "https://example.com/docs/aadhaar.pdf", "VERIFIED",
+                    java.time.LocalDateTime.of(2026, 5, 12, 10, 0)));
             staffDocumentRepository.save(new StaffDocument(null, staff.getId(), "PROFESSIONAL_CERT",
-                    "Medical Registration Certificate", "https://example.com/docs/mrc.pdf", "VERIFIED", java.time.LocalDateTime.now()));
+                    "Medical Reg Certificate", "https://example.com/docs/mrc.pdf", "VERIFIED",
+                    java.time.LocalDateTime.of(2026, 5, 12, 10, 0)));
             staffDocumentRepository.save(new StaffDocument(null, staff.getId(), "PROFILE_PHOTO",
-                    "Profile Photo", "https://example.com/docs/photo.jpg", "VERIFIED", java.time.LocalDateTime.now()));
+                    "Profile Photo", "https://example.com/docs/photo.jpg", "VERIFIED",
+                    java.time.LocalDateTime.of(2026, 5, 12, 10, 0)));
+
+            StaffBankDetails bank = new StaffBankDetails();
+            bank.setUserId(staff.getId());
+            bank.setBankName("HDFC Bank");
+            bank.setAccountNumber("501002456789643");
+            bank.setMaskedAccountNumber("XXXX XXXX 643");
+            bank.setIfscCode("HDFC0001234");
+            bank.setDocumentUrl("https://example.com/docs/bank-passbook.jpg");
+            bank.setStatus("VERIFIED");
+            staffBankDetailsRepository.save(bank);
+
+            seedStaffEarnings(staff.getLinkedProfileId());
+        });
+    }
+
+    private void seedStaffEarnings(String doctorId) {
+        Doctor doctor = doctorRepository.findById(doctorId).orElse(null);
+        if (doctor == null) return;
+        userRepository.findByPhone("9876543210").ifPresent(patient -> {
+            String today = LocalDate.now().toString();
+            seedStaffAppointment(doctor, patient, today, "10:30 AM", "General Consultation",
+                    AppointmentStatus.COMPLETED, "T1", "DR20-EARN1", "General Consultation",
+                    null, null, null, 250.0);
+            seedStaffAppointment(doctor, patient, today, "10:00 AM", "General Consultation",
+                    AppointmentStatus.COMPLETED, "T2", "DR20-EARN2", "General Consultation",
+                    null, null, null, 250.0);
+            seedStaffAppointment(doctor, patient, today, "09:30 AM", "General Consultation",
+                    AppointmentStatus.COMPLETED, "T3", "DR20-EARN3", "General Consultation",
+                    null, null, null, 250.0);
         });
     }
 

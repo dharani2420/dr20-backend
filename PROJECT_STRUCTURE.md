@@ -61,4 +61,4 @@ src/main/java/com/dr20/
 | Database models | `shared/model/` |
 | JWT / security | `common/security/` |
 
-See **TESTING.md** for API test steps.
+See **PATIENT_FLOW.md** and **PATIENT_E2E_TESTING.md** for patient APIs. **TESTING.md** for overview.

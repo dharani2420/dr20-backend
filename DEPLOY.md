@@ -146,7 +146,7 @@ curl -X POST https://YOUR_URL/api/staff/auth/verify-otp `
   -d "{\"phone\":\"9123456781\",\"otp\":\"123456\"}"
 ```
 
-Use the returned `token` for staff APIs. See `TESTING.md` **Live Staging** section and `postman/Dr20-Staff-Phase1.postman_collection.json`.
+Use the returned `token` for staff APIs. See `TESTING.md` and `postman/Dr20-Staff-E2E.postman_collection.json`.
 
 ---
 
@@ -178,7 +178,8 @@ On first run with an empty database, `DataSeedService` creates:
 | Item | Value |
 |------|-------|
 | Staff doctor (Dr. Priya) | phone `9123456781` |
-| Sample token | `7842` |
+| Patient | phone `9876543210`, name `pravin av` |
+| Sample token | `07` |
 | Sample QR | `DR20-SEED001` |
 
 To reset Atlas data: Atlas → Browse Collections → drop `dr20db`, or:
@@ -198,7 +199,7 @@ Then restart the deployed service.
 Point the app API base URL to your live host:
 
 ```javascript
-const API_BASE = 'https://dr20-api.onrender.com';  // not localhost
+const API_BASE = 'https://dr20-backend.onrender.com';
 ```
 
 Store JWT in secure storage after OTP login; attach `Authorization: Bearer <token>` on every request.
@@ -240,4 +241,4 @@ Store JWT in secure storage after OTP login; attach `Authorization: Bearer <toke
 | OTP | PC terminal | Render/Railway logs |
 | Postman `baseUrl` | `http://localhost:8081` | `https://YOUR_URL` |
 
-See **TESTING.md** for full staff and patient test flows.
+See **TESTING.md**, **PATIENT_E2E_TESTING.md**, and **PATIENT_FLOW.md**.

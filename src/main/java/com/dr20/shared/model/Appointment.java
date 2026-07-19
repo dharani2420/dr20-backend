@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.Transient;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
@@ -60,4 +61,13 @@ public class Appointment {
     private LocalDateTime startedAt;
     private LocalDateTime completedAt;
     private LocalDateTime createdAt = LocalDateTime.now();
+
+    @Transient
+    private String statusLabel;
+
+    @Transient
+    private String cardLabel;
+
+    @Transient
+    private String relativeTime;
 }

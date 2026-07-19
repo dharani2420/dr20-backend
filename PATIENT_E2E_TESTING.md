@@ -1,153 +1,374 @@
 # Dr.20 Patient E2E — Testing Guide
 
+
+
 **Base URL:** `https://dr20-backend.onrender.com`  
+
 **Postman:** Import `postman/Dr20-Patient-E2E.postman_collection.json`
 
+
+
 ---
+
+
 
 ## Before you start
 
+
+
 1. **Cold start:** Render free tier may take 30–60s on first request.
+
 2. **Auth:** Postman Auth tab = **No Auth**. Protected requests use one header: `Authorization: Bearer {{patientToken}}`.
+
 3. **OTP:** After Send OTP, copy OTP from **Render Logs** (staging prints OTP in console).
-4. **Two test paths:**
+
+4. **Re-import collection** after updates — collection uses **folders** with full CRUD coverage.
+
+5. **Two test paths:**
+
    - **Path A — Seed patient:** phone `9876543210` (profile already complete on fresh DB)
+
    - **Path B — New signup:** use step `1b` with `9444444444`, then steps 2 → 3
 
----
 
-## End-to-end test sequence
-
-Run Postman steps **in order**. Check ✅ expected result.
-
-### Auth & Profile
-
-| Step | Postman | API | Expected |
-|------|---------|-----|----------|
-| 1 | 1. Send OTP | `POST /api/auth/send-otp` | `success: true` |
-| 2 | 2. Verify OTP | `POST /api/auth/verify-otp` | `token`, `userId`, `isProfileComplete` saved to variables |
-| 3 | 3. Complete Profile | `POST /api/auth/complete-profile` | Only if `isProfileComplete: false`. Returns `user` with name, email, DOB, gender, bloodGroup |
-
-**Android screens:** Login → OTP → Complete Profile → Profile Created
 
 ---
 
-### Home & Discovery
 
-| Step | Postman | API | Expected |
-|------|---------|-----|----------|
-| 4 | 4. Home Screen | `GET /api/home/{userId}` | `greeting`, `location`, `banners`, `consultAt20Doctors`, `nextAppointment` with QR/token |
-| 5 | 5. Services Screen | `GET /api/services` | `consultations`, `symptoms`, `careServices`, `specializations` |
-| 6 | 6. Search | `GET /api/search?q=Priya` | `doctors`, `specializations`, `symptoms` |
-| 7 | 7. Specializations | `GET /api/specializations` | List with icons (Choose Specialization modal) |
-| 8 | 8. List Doctors ₹20 | `GET /api/doctors?maxFee=20&clinicType=DR20_CLINIC` | Doctors with `consultationFee: 20`, saves `doctorId` |
-| 8b | 8b. Private Clinics | `?clinicType=PRIVATE_CLINIC` | Higher fee doctors (e.g. ₹300) |
-| 8c | 8c. Nearest | `?sort=nearest&latitude=12.9249&longitude=80.1000` | `distanceKm` on each doctor |
 
-**Android screens:** Home → Services tab → Choose Doctors (filters)
+## Patient API — CRUD matrix
 
----
 
-### Doctor Profile & Booking
 
-| Step | Postman | API | Expected |
-|------|---------|-----|----------|
-| 9 | 9. Doctor Profile | `GET /api/doctors/{id}/detail` | `doctor` (about, expertise, clinic), `reviews`, `averageRating` |
-| 10 | 10. Doctor Slots | `GET /api/doctors/{id}/slots?date=` | Array of time strings — pick one for `appointmentTime` |
-| 11 | 11. Book Appointment | `POST /api/appointments` | `status: UPCOMING`, `paymentStatus: PENDING`, `tokenNumber`, `qrData`, `totalFee: 20` for ₹20 doctors |
-| 12 | 12. Bill Summary | `GET /api/payments/summary/{appointmentId}` | `itemTotal: 20`, `platformFeeWaived: true`, `totalPayable: 20` |
+| Resource | Create | Read | Update | Delete / Cancel |
 
-**Android screens:** Doctor Profile → Booking Confirmation
+|----------|--------|------|--------|-----------------|
 
----
+| **Profile** | 3. Complete Profile | 20. Get Profile | 20b. Update Profile | — |
 
-### Payment & Pass
+| **Appointments** | 11. Book | 15b, 16–19 | 11b. Reschedule | 19a. Cancel |
 
-| Step | Postman | API | Expected |
-|------|---------|-----|----------|
-| 13 | 13. Create Payment Order | `POST /api/payments/create-order` | `orderId`, `paymentId` (mock) |
-| 14 | 14. Verify Payment | `POST /api/payments/verify` | `success: true`, appointment → `PAID`, `CONFIRMED` |
-| 15 | 15. Appointment Pass | `GET /api/appointments/{id}/pass` | `qrData`, `tokenNumber`, `clinic`, `activePass: true`, `degree` |
+| **Payments** | 13. Create Order | 12. Summary, 24. History | 14. Verify (status) | — |
 
-**Android screens:** Payment Successful → Appointment Pass
+| **Family** | 22. Add | 21. List | 22b. Update | 22c. Delete |
+
+| **Notifications** | (auto on book/pay) | 23. List, 23b. Unread | 23c/23d. Mark read | — |
+
+| **Reviews** | 25. Submit | 25b, 25c. Doctor reviews | — | — |
+
+| **Medical records** | 26c. Add | 26. List, 26b. By ID | — | — |
+
+| **Discovery** | — | 4–10. Home, doctors, slots | — | — |
+
+
 
 ---
 
-### Appointments Tab
 
-| Step | Postman | API | Expected |
-|------|---------|-----|----------|
-| 16 | 16. All | `GET /api/appointments/user/{userId}` | All appointments |
-| 17 | 17. Upcoming | `.../upcoming` | Future non-cancelled |
-| 18 | 18. Completed | `.../completed` | `status: COMPLETED` only |
-| 19 | 19. Cancelled | `.../cancelled` | Cancelled only |
 
-**Android screens:** Appointment tab with All / Completed / Upcoming / Cancelled filters
+## Recommended full E2E run order
+
+
+
+Run folders **in order**. Steps marked **(CRUD)** are new write/update/delete operations.
+
+
+
+### 01 — Auth & Profile
+
+| Step | API | Expected |
+
+|------|-----|----------|
+
+| 1 → 2 | OTP login | `token`, `userId` saved |
+
+| 3 | Complete profile | Only if `isProfileComplete: false` |
+
+| 20 | Get profile | User details |
+
+| 20b | Update profile **(CRUD)** | Email/address updated |
+
+
+
+### 02 — Discovery (READ)
+
+| Step | API | Expected |
+
+|------|-----|----------|
+
+| 4–9 | Home, services, search, doctors | Data loads; step 8 saves `doctorId`, `appointmentDate`, `rescheduleDate` |
+
+| 10 | Doctor slots | Auto-saves first slot → `appointmentTime` |
+
+| 10b | Slots for reschedule date | Auto-saves `rescheduleTime` |
+
+
+
+### 03 — Book & Pay
+
+| Step | API | Expected |
+
+|------|-----|----------|
+
+| 11 | Book **(CREATE)** | `appointmentId`, `status: UPCOMING` |
+
+| 11b | Reschedule **(UPDATE)** | Date/time changed to `rescheduleDate` / `rescheduleTime` |
+
+| 11c | Book second **(CREATE)** | `cancelAppointmentId` — used only for cancel test |
+
+| 12–14 | Summary → pay | `CONFIRMED`, `PAID` |
+
+| 15 | Appointment pass | `qrData`, `tokenNumber` |
+
+
+
+### 04 — Appointments (CRUD)
+
+| Step | API | Expected |
+
+|------|-----|----------|
+
+| 15b | Get by ID **(READ)** | Single appointment |
+
+| 16 | All | Full list |
+
+| 17 | Upcoming | Future appointments |
+
+| 17b | Past **(READ)** | Past dates |
+
+| 18 | Completed | `COMPLETED` only — empty until staff completes (see below) |
+
+| 19a | Cancel **(CANCEL)** | Cancels `cancelAppointmentId` (second booking) |
+
+| 19 | Cancelled list | Shows cancelled appointment |
+
+
+
+### 05 — Payments (READ)
+
+| Step | API | Expected |
+
+|------|-----|----------|
+
+| 24 | Payment history | List with `SUCCESS` payments |
+
+
+
+### 06 — Family (CRUD)
+
+| Step | API | Expected |
+
+|------|-----|----------|
+
+| 21 | List | Mother, Father (seed) + added members |
+
+| 22 | Add **(CREATE)** | `familyMemberId` saved |
+
+| 22b | Update **(UPDATE)** | Name/age updated |
+
+| 22c | Delete **(DELETE)** | Member removed |
+
+
+
+### 07 — Notifications
+
+| Step | API | Expected |
+
+|------|-----|----------|
+
+| 23 | List | Notifications from book/pay; saves `notificationId` |
+
+| 23b | Unread count | `{ count: N }` |
+
+| 23c | Mark read | Single notification `read: true` |
+
+| 23d | Mark all read | All marked read |
+
+
+
+### 08 — Reviews
+
+| Step | API | Expected |
+
+|------|-----|----------|
+
+| 25 | Submit **(CREATE)** | Needs `completedAppointmentId` — staff must complete first |
+
+| 25b–25c | Doctor reviews | List + summary |
+
+
+
+### 09 — Medical Records
+
+| Step | API | Expected |
+
+|------|-----|----------|
+
+| 26 | List | Seed record + staff-created records |
+
+| 26b | Get by ID | Single record |
+
+| 26c | Add **(CREATE)** | New record saved |
+
+
 
 ---
 
-### Profile & Family
 
-| Step | Postman | API | Expected |
-|------|---------|-----|----------|
-| 20 | 20. Get Profile | `GET /api/auth/profile/{userId}` | Name, phone, email, DOB, gender, bloodGroup |
-| 21 | 21. List Family | `GET /api/family/{userId}` | Mother, Father (seed) |
-| 22 | 22. Add Family Member | `POST /api/family/{userId}` | New member with id |
 
-**Android screens:** Profile → Family Members → Add Member
+## Staff steps required for Completed + Review
+
+
+
+Payment alone does **not** complete an appointment. Use **Dr.20 Staff App** collection:
+
+
+
+1. Login as booked doctor (`9123456781` for Dr. Priya)
+
+2. Verify with **your** `tokenNumber` or `qrData` from step 15
+
+3. Start → Complete using **your** `appointmentId` from step 11
+
+4. Patient step **18** → saves `completedAppointmentId`
+
+5. Patient step **25** → submit review
+
+
 
 ---
+
+
 
 ## Android integration checklist
 
+
+
 | Figma screen | API endpoint | Postman step |
+
 |--------------|--------------|--------------|
+
 | Send OTP | `POST /api/auth/send-otp` | 1 |
+
 | Verify OTP | `POST /api/auth/verify-otp` | 2 |
+
 | Create Profile | `POST /api/auth/complete-profile` | 3 |
+
+| Edit Profile | `PUT /api/auth/profile/{userId}` | 20b |
+
 | Home | `GET /api/home/{userId}` | 4 |
+
 | Services | `GET /api/services` | 5 |
+
 | Search | `GET /api/search?q=` | 6 |
+
 | Specializations | `GET /api/specializations` | 7 |
+
 | Doctor list ₹20 | `GET /api/doctors?maxFee=20&clinicType=DR20_CLINIC` | 8 |
+
 | Doctor profile | `GET /api/doctors/{id}/detail` | 9 |
+
 | Slots | `GET /api/doctors/{id}/slots?date=` | 10 |
+
 | Book | `POST /api/appointments` | 11 |
+
+| Reschedule | `PUT /api/appointments/{id}/reschedule` | 11b |
+
+| Cancel | `PUT /api/appointments/{id}/cancel` | 19a |
+
 | Bill summary | `GET /api/payments/summary/{id}` | 12 |
+
 | Pay (mock) | `create-order` + `verify` | 13–14 |
+
+| Payment history | `GET /api/payments/user/{userId}` | 24 |
+
 | Appointment pass | `GET /api/appointments/{id}/pass` | 15 |
-| Appointment tabs | `user/{id}`, `/upcoming`, `/completed`, `/cancelled` | 16–19 |
+
+| Appointment tabs | `user/{id}`, `/upcoming`, `/past`, `/completed`, `/cancelled` | 16–19 |
+
+| Notifications | `GET /api/notifications/user/{userId}` | 23 |
+
+| Submit review | `POST /api/reviews` | 25 |
+
+| Medical records | `GET/POST /api/medical-records/user/{userId}` | 26, 26c |
+
 | Profile | `GET /api/auth/profile/{userId}` | 20 |
-| Family | `GET/POST /api/family/{userId}` | 21–22 |
+
+| Family CRUD | `GET/POST/PUT/DELETE /api/family/...` | 21–22c |
+
+
 
 ---
+
+
 
 ## Common issues
 
+
+
 | Problem | Fix |
+
 |---------|-----|
+
 | 403 Forbidden | Remove duplicate Authorization headers; use Auth tab = No Auth |
+
 | OTP invalid | Check Render logs; wait 60s before resend |
-| Slot not available | Run step 10 first; pick a slot from response; update `appointmentTime` variable |
+
+| `ENOTFOUND dr20-backend.onrender.com` | Network/DNS issue — check internet, VPN, retry; open URL in browser |
+
+| Slot not available | Run step 10 first; slots auto-save to `appointmentTime` |
+
+| Empty completed (step 18) | Staff must verify → start → complete **your** `appointmentId` |
+
+| Empty cancelled (step 19) | Run **11c** then **19a** (cancels second booking, not main one) |
+
+| Reschedule fails | Run **10b** first for `rescheduleDate` slots |
+
+| Review fails | Appointment must be `COMPLETED`; run staff complete + step 18 first |
+
+| `Not your appointment` on cancel | Wrong `patientToken` or wrong `appointmentId` |
+
 | Empty consultAt20Doctors | DB seeded with old data — redeploy with fresh Mongo or use filters on step 8 |
+
 | `isProfileComplete: true` skips profile | Expected for seed phone `9876543210` |
 
+
+
 ---
+
+
 
 ## Deploy to Android team
 
+
+
 After all Postman steps pass:
 
+
+
 1. Share base URL: `https://dr20-backend.onrender.com`
+
 2. Share this file + `PATIENT_FLOW.md`
+
 3. Share Postman collection for reference
+
 4. OTP: staging logs only (no SMS yet)
+
+
 
 ---
 
-## What to test next (not in this screenshot set)
 
-- Staff app (on hold)
+
+## What to test next (not in patient E2E)
+
+
+
+- Staff app full flow (`Dr20-Staff-E2E.postman_collection.json`)
+
 - Nurse/home-care booking flow
+
 - Real Razorpay payment
+
 - Location picker API (currently static `Tambaram` in home/services)
+

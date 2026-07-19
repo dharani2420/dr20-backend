@@ -23,4 +23,6 @@ public interface AppointmentRepository extends MongoRepository<Appointment, Stri
 
     long countByDoctorIdAndAppointmentDateAndStatusIn(
             String doctorId, String date, List<AppointmentStatus> statuses);
+
+    long countByDoctorIdAndStatus(String doctorId, AppointmentStatus status);
 }

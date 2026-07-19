@@ -16,7 +16,9 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -116,6 +118,25 @@ public class AvailabilityService {
                     .ifPresent(result::add);
         }
         return result;
+    }
+
+    public List<Map<String, Object>> getSlotsWithStatus(String doctorId, String dateStr) {
+        parseDate(dateStr);
+        doctorRepository.findById(doctorId)
+                .orElseThrow(() -> new ResourceNotFoundException("Doctor not found"));
+
+        Availability avail = availabilityRepository.findByDoctorIdAndDate(doctorId, dateStr)
+                .orElseGet(() -> createDefault(doctorId, dateStr));
+
+        return avail.getSlots().stream()
+                .map(slot -> {
+                    Map<String, Object> item = new LinkedHashMap<>();
+                    item.put("time", slot.getTime());
+                    item.put("booked", slot.isBooked());
+                    item.put("available", !slot.isBooked());
+                    return item;
+                })
+                .collect(Collectors.toList());
     }
 
     private Availability createDefault(String doctorId, String dateStr) {
